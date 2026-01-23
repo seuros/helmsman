@@ -1,0 +1,45 @@
+# Model → Tier Mappings
+#
+# Format: "pattern" = "tier"
+# Patterns support glob wildcards: * matches anything
+#
+# Tiers:
+#   agi      - Minimal instructions (expensive tokens, high capability)
+#   engineer - Balanced instructions
+#   monkey   - Verbose step-by-step guidance (cheap tokens)
+#
+# Contributing: Add your model patterns below and submit a PR!
+
+[models]
+
+# Anthropic Claude
+"claude-opus-*" = "agi"
+"claude-*-opus-*" = "agi"
+"claude-*-sonnet-*" = "engineer"
+"claude-*-haiku-*" = "monkey"
+
+# OpenAI GPT-5.2 (single model, 40 levels)
+"gpt-5.2-xhigh*" = "agi"
+"gpt-5.2-high*" = "agi"
+"gpt-5.2-medium*" = "engineer"
+"gpt-5.2-mini*" = "monkey"
+"gpt-5.2*" = "engineer"  # fallback for unknown levels
+
+# Google
+"gemini-*-pro*" = "engineer"
+"gemini-*-flash*" = "monkey"
+"gemini-3*" = "engineer"
+
+# Alibaba
+"qwen-*-72b*" = "engineer"
+"qwen-*-32b*" = "engineer"
+"qwen-*-7b*" = "monkey"
+"qwen-2.5-coder*" = "engineer"
+
+# DeepSeek
+"deepseek-r3*" = "agi"
+"deepseek-v3*" = "engineer"
+"deepseek-coder*" = "engineer"
+
+# xAI
+"grok-4*" = "engineer"

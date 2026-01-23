@@ -1,0 +1,52 @@
+{# Helmsman AGENTS.md.j2 - repo-specific guidance #}
+# Helmsman Repo Instructions
+
+OS: {{ env.os }} ({{ env.os_family }})
+Arch: {{ env.arch }}
+Shell: {{ env.shell }}
+
+{% if model.tier == "agi" %}
+## Scope
+- Be brief; make precise, high-impact changes only.
+- Prefer refactors that remove duplication without changing behavior.
+
+## Guardrails
+- Do not invent crates, features, or files.
+- Keep public behavior and CLI output stable unless requested.
+{% elif model.tier == "engineer" %}
+## Scope
+- Read relevant files first; follow existing patterns.
+- Prefer small, safe refactors that reduce duplication.
+
+## Guardrails
+- Do not invent crates, features, or files.
+- Keep public behavior and CLI output stable unless requested.
+{% else %}
+## Before You Change Code
+1. Read the file(s) you will edit.
+2. Confirm the existing behavior and patterns.
+3. Plan the minimal change that keeps behavior stable.
+
+## Guardrails
+- Do not invent crates, features, or files.
+- Keep public behavior and CLI output stable unless requested.
+{% endif %}
+
+## Repo Notes
+- Rust 2024 edition.
+- Embedded model mappings live in `src/models.toml` via `include_str!`.
+- Skills live in `.skills/`; files starting with `_` are partials.
+- Frontmatter is YAML and optional; shared parsing lives in `src/skills.rs`.
+- Avoid duplicating skill parsing/path logic; reuse shared helpers.
+- Use `.j2` for Jinja templates (minijinja loads by name).
+
+## Useful Commands
+- `cargo build --release`
+- `cargo test`
+
+{% if project.cwd %}
+Working directory: {{ project.cwd }}
+{% endif %}
+{% if project.stack %}
+Stack: {{ project.stack | join(", ") }}
+{% endif %}

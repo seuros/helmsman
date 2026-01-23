@@ -1,0 +1,11 @@
+---
+# Partial Template (prefixed with underscore)
+# Partials are not listed as skills, only used for includes
+name: Header Partial
+description: Reusable header included in other skills
+---
+# {{ skill_name | default("Unnamed Skill") }}
+
+> Running on **{{ model.tier }}** tier | {{ env.os }}/{{ env.arch }}
+
+---

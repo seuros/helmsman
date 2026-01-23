@@ -1,0 +1,160 @@
+---
+# Skill Frontmatter - All Options
+# ================================
+# All fields are optional. If omitted, sensible defaults apply.
+
+name: Example Skill
+description: |
+  Comprehensive example demonstrating all skill options.
+  Multi-line descriptions are supported.
+
+# Topics for categorization/discovery
+topics:
+  - documentation
+  - example
+  - template
+
+# Tier restrictions - omit to allow all tiers
+# Canonical tiers: agi, engineer, monkey
+# If specified, skill only available to listed tiers
+tiers:
+  - agi
+  - engineer
+  - monkey
+
+# Attribution (supports multiple)
+authors:
+  - helmsman
+  - contributors
+---
+# Example Skill
+
+This skill demonstrates all available template features.
+
+## Model Context
+
+- **Model ID**: {{ model.id }}
+- **Tier**: {{ model.tier }}
+
+{% if model.tier == "agi" %}
+You're running on a top-tier model with advanced reasoning capabilities.
+{% elif model.tier == "engineer" %}
+You're running on a capable engineering model.
+{% elif model.tier == "monkey" %}
+You're running on a fast, efficient model for simple tasks.
+{% endif %}
+
+## Project Context
+
+{% if project.cwd %}
+- **Working Directory**: {{ project.cwd }}
+{% endif %}
+
+{% if project.stack %}
+- **Stack**: {{ project.stack | join(", ") }}
+{% endif %}
+
+{% if project.vars %}
+### Custom Variables
+{% for key, value in project.vars | items %}
+- {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+
+## Environment Detection
+
+### System Info
+- **OS**: {{ env.os }} ({{ env.os_family }})
+- **Architecture**: {{ env.arch }}
+- **Shell**: {{ env.shell }}
+
+### Runtime Context
+- **In Docker**: {{ env.in_docker }}
+- **In SSH**: {{ env.in_ssh }}
+- **In Container**: {{ env.in_container }}
+
+### Available Tools
+{% if env.has_git %}- git{% endif %}
+{% if env.has_gh %}- gh (GitHub CLI){% endif %}
+{% if env.has_curl %}- curl{% endif %}
+{% if env.has_wget %}- wget{% endif %}
+{% if env.has_jq %}- jq{% endif %}
+
+### Package Managers
+{% if env.has_brew %}- brew (Homebrew){% endif %}
+{% if env.has_apt %}- apt{% endif %}
+{% if env.has_dnf %}- dnf{% endif %}
+{% if env.has_pkg %}- pkg (FreeBSD){% endif %}
+
+### Runtime Managers
+{% if env.has_mise %}- mise (recommended){% endif %}
+{% if env.has_nvm %}- nvm{% endif %}
+{% if env.has_rbenv %}- rbenv{% endif %}
+{% if env.has_pyenv %}- pyenv{% endif %}
+
+## Conditional Instructions
+
+{% if env.os == "macos" %}
+### macOS Specific
+Use `brew` for package management.
+{% elif env.os == "debian" or env.os == "ubuntu" %}
+### Debian/Ubuntu Specific
+Use `apt` for package management.
+{% elif env.os == "alpine" %}
+### Alpine Specific
+Use `apk` for package management. Note: busybox limitations may apply.
+{% elif env.os == "fedora" %}
+### Fedora Specific
+Use `dnf` for package management.
+{% endif %}
+
+{% if env.in_container %}
+### Container Environment
+Running in a containerized environment. Some operations may be restricted.
+{% endif %}
+
+{% if env.in_ssh %}
+### Remote Session
+Connected via SSH. Consider latency for interactive operations.
+{% endif %}
+
+## Including Partials
+
+Partials are skill fragments prefixed with underscore: `_header.j2`, `_footer.j2`
+Include them with: {% raw %}{% include "_partial.j2" %}{% endraw %}
+
+## Template Syntax Reference
+
+### Variables
+{% raw %}
+- `{{ variable }}` - Output a variable
+- `{{ var | filter }}` - Apply a filter
+{% endraw %}
+
+### Conditionals
+```jinja
+{% raw %}
+{% if condition %}
+  ...
+{% elif other %}
+  ...
+{% else %}
+  ...
+{% endif %}
+{% endraw %}
+```
+
+### Loops
+```jinja
+{% raw %}
+{% for item in items %}
+  {{ item }}
+{% endfor %}
+{% endraw %}
+```
+
+### Filters
+- `| join(",")` - Join array with separator
+- `| default("fallback")` - Provide default value
+- `| upper`, `| lower` - Case conversion
+- `| items` - Convert dict to key-value pairs
