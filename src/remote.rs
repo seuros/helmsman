@@ -153,7 +153,7 @@ impl RemoteFetcher {
             cmd.arg("--branch").arg(git_ref);
         }
 
-        cmd.arg(&source.clone_url()).arg(&repo_path);
+        cmd.arg(source.clone_url()).arg(&repo_path);
 
         let output = cmd.output()?;
 
@@ -200,14 +200,13 @@ impl RemoteFetcher {
             let specific = self
                 .repo_path
                 .join(format!("{}.{}", sub, SKILL_EXTENSION));
-            if specific.is_file() {
-                if let Some(name) = skill_name_from_path(&specific) {
+            if specific.is_file()
+                && let Some(name) = skill_name_from_path(&specific) {
                     let skill = self.parse_skill_file(&name, &specific)?;
                     if !skills.iter().any(|s| s.name == skill.name) {
                         skills.push(skill);
                     }
                 }
-            }
         }
 
         // Fallback: deep scan if nothing found in expected locations.

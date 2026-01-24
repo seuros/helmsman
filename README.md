@@ -134,32 +134,20 @@ helmsman -t                           # show token count
 
 ## Configuration
 
-**helmsman.toml** - tier definitions:
+Create optional `helmsman.toml` in:
+1. Current directory (project-local)
+2. `~/.config/helmsman/` (user global)
+3. Set `$HELMSMAN_CONFIG` env var to override
+
 ```toml
-[tiers.agi]
-max_context = 8000
-features = ["planning", "architecture", "autonomous"]
-
-[tiers.monkey]
-max_context = 1000
-features = ["quick_tasks", "simple_edits"]
-
 [defaults]
 tier = "engineer"
+
+[server]
+templates_dir = "~/my-templates"
 ```
 
-**src/models.toml** - model → tier mappings (embedded into the binary):
-```toml
-[models]
-"claude-opus-*" = "agi"
-"claude-*-sonnet-*" = "engineer"
-"claude-*-haiku-*" = "monkey"
-"gpt-5.2-xhigh*" = "agi"
-"gpt-5.2-high*" = "agi"
-"gpt-5.2-medium*" = "engineer"
-"gpt-5.2-mini*" = "monkey"
-"deepseek-r3*" = "agi"
-```
+Model → tier mappings are pre-configured for Anthropic, OpenAI, Google, and other major models. Unknown models default to `engineer` tier.
 
 ## Skills
 

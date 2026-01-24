@@ -1,7 +1,7 @@
 //! Skill registry and lock file management.
 
-use chrono::{DateTime, Utc};
 use crate::skills::SKILLS_DIR_NAME;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -10,11 +10,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum RegistryError {
     #[error("Failed to read registry: {0}")]
-    ReadError(#[from] std::io::Error),
+    Read(#[from] std::io::Error),
     #[error("Failed to parse registry: {0}")]
-    ParseError(#[from] toml::de::Error),
+    Parse(#[from] toml::de::Error),
     #[error("Failed to serialize registry: {0}")]
-    SerializeError(#[from] toml::ser::Error),
+    Serialize(#[from] toml::ser::Error),
 }
 
 /// A single installed skill entry.

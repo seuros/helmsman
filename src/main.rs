@@ -11,7 +11,7 @@ mod skills;
 mod tokenizer;
 
 use clap::{Parser, Subcommand};
-use config::Config;
+use config::{Config, MCP_NAME, MCP_VERSION};
 use dialoguer::{theme::ColorfulTheme, Select};
 use engine::TemplateEngine;
 use mcp_host::prelude::*;
@@ -196,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // MCP server mode
     let helmsman = Arc::new(helmsman);
-    let server = mcp_host::server::builder::server(&config.server.name, &config.server.version)
+    let server = mcp_host::server::builder::server(MCP_NAME, MCP_VERSION)
         .with_instructions("Resources: skill:/// (list), skill:///{name} (render, default model).")
         .with_prompts(true)
         .with_resources(true, false)

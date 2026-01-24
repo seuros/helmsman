@@ -5,12 +5,18 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
+/// MCP server identifier
+pub const MCP_NAME: &str = "helmsman";
+
+/// MCP server version (from Cargo.toml)
+pub const MCP_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("Failed to read config: {0}")]
-    ReadError(#[from] std::io::Error),
+    Read(#[from] std::io::Error),
     #[error("Failed to parse config: {0}")]
-    ParseError(#[from] toml::de::Error),
+    Parse(#[from] toml::de::Error),
     #[error("Templates directory not found: {0}")]
     TemplatesNotFound(PathBuf),
 }
@@ -27,23 +33,11 @@ pub struct Config {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[derive(Default)]
 pub struct ServerConfig {
-    #[serde(default = "default_name")]
-    pub name: String,
-    #[serde(default = "default_version")]
-    pub version: String,
     pub templates_dir: Option<String>,
 }
 
-impl Default for ServerConfig {
-    fn default() -> Self {
-        Self {
-            name: default_name(),
-            version: default_version(),
-            templates_dir: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct DefaultsConfig {
@@ -57,14 +51,6 @@ impl Default for DefaultsConfig {
             tier: default_tier(),
         }
     }
-}
-
-fn default_name() -> String {
-    "helmsman".to_string()
-}
-
-fn default_version() -> String {
-    "0.1.0".to_string()
 }
 
 fn default_tier() -> String {
@@ -212,8 +198,8 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = Config::default();
-        assert_eq!(config.server.name, "helmsman");
         assert_eq!(config.defaults.tier, "engineer");
+        assert_eq!(MCP_NAME, "helmsman");
     }
 
     #[test]
