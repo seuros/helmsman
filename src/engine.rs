@@ -90,8 +90,17 @@ impl TemplateEngine {
             current = dir.parent();
         }
 
+        // Platform config dir (~/Library/Application Support on macOS)
         if let Some(config_dir) = dirs::config_dir() {
             paths.push(config_dir.join("helmsman").join("skills"));
+        }
+
+        // XDG fallback (~/.config) - for cross-platform consistency
+        if let Some(home) = &home {
+            let xdg_config = home.join(".config").join("helmsman").join("skills");
+            if !paths.contains(&xdg_config) {
+                paths.push(xdg_config);
+            }
         }
 
         paths
