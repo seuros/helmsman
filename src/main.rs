@@ -24,6 +24,7 @@ use std::sync::Arc;
 
 #[derive(Parser)]
 #[command(name = "helmsman")]
+#[command(version)]
 #[command(about = "Adaptive instruction server")]
 struct Cli {
     #[command(subcommand)]
@@ -96,6 +97,13 @@ enum Commands {
     Update {
         /// Specific skill to update (updates all if omitted)
         name: Option<String>,
+    },
+
+    /// Migrate static markdown to templates
+    Migrate {
+        /// Overwrite existing .j2 files
+        #[arg(short, long)]
+        force: bool,
     },
 }
 
@@ -229,6 +237,9 @@ async fn handle_command(command: Commands) -> Result<(), Box<dyn std::error::Err
         }
         Commands::Update { name } => {
             cmd_update(name.as_deref())?;
+        }
+        Commands::Migrate { force } => {
+            cmd_migrate(force)?;
         }
     }
     Ok(())
@@ -417,6 +428,67 @@ fn cmd_update(name: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\n✨ Update complete!");
+    Ok(())
+}
+
+/// Migrate AGENTS.md, CLAUDE.md, and .skills/*.md to .j2 templates.
+fn cmd_migrate(force: bool) -> Result<(), Box<dyn std::error::Error>> {
+    // Migrate root markdown files
+    let root_files = ["AGENTS.md", "CLAUDE.md"];
+
+    for src_name in root_files {
+        let dst_name = format!("{}.j2", src_name);
+        migrate_file(std::path::Path::new(src_name), std::path::Path::new(&dst_name), force)?;
+    }
+
+    // Migrate skills in .skills/ directory
+    let skills_dir = std::path::Path::new(skills::SKILLS_DIR_NAME);
+    if skills_dir.is_dir() {
+        for entry in std::fs::read_dir(skills_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            // Only process .md files
+            if path.extension().and_then(|e| e.to_str()) != Some("md") {
+                continue;
+            }
+
+            let dst_path = path.with_extension("md.j2");
+            migrate_file(&path, &dst_path, force)?;
+        }
+    }
+
+    println!("\n✨ Migration complete!");
+    Ok(())
+}
+
+/// Migrate a single file to .j2 template.
+fn migrate_file(src: &std::path::Path, dst: &std::path::Path, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+    // Skip if source doesn't exist
+    if !src.exists() {
+        return Ok(());
+    }
+
+    let src_display = src.display();
+    let dst_display = dst.display();
+
+    // Skip if source is a symlink
+    if src.symlink_metadata()?.file_type().is_symlink() {
+        eprintln!("  ↷ {} (symlink, skipped)", src_display);
+        return Ok(());
+    }
+
+    // Skip if destination exists (unless force)
+    if dst.exists() && !force {
+        eprintln!("  ↷ {} exists (use -f to overwrite)", dst_display);
+        return Ok(());
+    }
+
+    // Copy content
+    let content = std::fs::read_to_string(src)?;
+    std::fs::write(dst, content)?;
+    println!("  ✓ {} → {}", src_display, dst_display);
+
     Ok(())
 }
 

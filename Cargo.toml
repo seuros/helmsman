@@ -1,6 +1,6 @@
 [package]
 name = "helmsman"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2024"
 authors = ["Abdelkader Boudih <oss@seuros.com>"]
 license = "BSD-3-Clause"
