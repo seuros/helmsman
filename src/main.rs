@@ -105,6 +105,16 @@ enum Commands {
         #[arg(short, long)]
         force: bool,
     },
+
+    /// Count tokens in files (or stdin)
+    Tokens {
+        /// Files to count (reads stdin if omitted)
+        files: Vec<PathBuf>,
+
+        /// Print total only (no per-file breakdown)
+        #[arg(short, long)]
+        total: bool,
+    },
 }
 
 #[tokio::main]
@@ -240,6 +250,9 @@ async fn handle_command(command: Commands) -> Result<(), Box<dyn std::error::Err
         }
         Commands::Migrate { force } => {
             cmd_migrate(force)?;
+        }
+        Commands::Tokens { files, total } => {
+            cmd_tokens(&files, total)?;
         }
     }
     Ok(())
@@ -488,6 +501,39 @@ fn migrate_file(src: &std::path::Path, dst: &std::path::Path, force: bool) -> Re
     let content = std::fs::read_to_string(src)?;
     std::fs::write(dst, content)?;
     println!("  ✓ {} → {}", src_display, dst_display);
+
+    Ok(())
+}
+
+/// Count tokens in files or stdin.
+fn cmd_tokens(files: &[PathBuf], total_only: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use std::io::Read;
+
+    if files.is_empty() {
+        let mut buf = String::new();
+        std::io::stdin().read_to_string(&mut buf)?;
+        println!("{}", tokenizer::count_tokens(&buf));
+        return Ok(());
+    }
+
+    let mut grand_total = 0usize;
+    for path in files {
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("{}: {}", path.display(), e))?;
+        let count = tokenizer::count_tokens(&content);
+        grand_total += count;
+        if !total_only {
+            println!("{}\t{}", count, path.display());
+        }
+    }
+
+    if total_only || files.len() > 1 {
+        if total_only {
+            println!("{}", grand_total);
+        } else {
+            println!("{}\ttotal", grand_total);
+        }
+    }
 
     Ok(())
 }
