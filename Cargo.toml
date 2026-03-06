@@ -1,6 +1,6 @@
 [package]
 name = "helmsman"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Abdelkader Boudih <oss@seuros.com>"]
 license = "BSD-3-Clause"
@@ -14,7 +14,7 @@ mcp-host = { version = "0.1", features = ["macros"] }
 minijinja = { version = "2", features = ["loader"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.9"
+toml = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 dirs = "6"
 glob = "0.3"
@@ -23,7 +23,7 @@ clap = { version = "4", features = ["derive"] }
 tiktoken-rs = "0.9.1"
 serde_yaml = "0.9"
 similar = "2"
-rand = "0.9"
+rand = "0.10"
 tempfile = "3"
-dialoguer = "0.11"
+dialoguer = "0.12"
 chrono = { version = "0.4", features = ["serde"] }

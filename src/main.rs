@@ -1,5 +1,6 @@
 //! Helmsman - Adaptive instruction server.
 
+mod anthropic;
 mod config;
 mod engine;
 mod environment;
@@ -115,6 +116,24 @@ enum Commands {
         #[arg(short, long)]
         total: bool,
     },
+
+    /// Check if helmsman can see you (and whether you're Claude)
+    Ping,
+
+    /// Handle Claude Code lifecycle hook events
+    Hook {
+        /// Override hook event (for testing without piping JSON)
+        #[arg(long, value_name = "EVENT")]
+        event: Option<String>,
+
+        /// Override model ID
+        #[arg(short, long, value_name = "MODEL")]
+        model: Option<String>,
+
+        /// Dump raw hook JSON to file (for debugging payloads)
+        #[arg(long, value_name = "FILE")]
+        dump: Option<PathBuf>,
+    },
 }
 
 #[tokio::main]
@@ -213,11 +232,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // MCP server mode
+    let project_ctx_handle = helmsman.project_ctx_handle();
     let helmsman = Arc::new(helmsman);
     let server = mcp_host::server::builder::server(MCP_NAME, MCP_VERSION)
         .with_instructions("Resources: skill:/// (list), skill:///{name} (render, default model).")
         .with_prompts(true)
         .with_resources(true, false)
+        .on_initialized(move |_session_id, requester| {
+            let ctx_handle = project_ctx_handle.clone();
+            async move {
+                if let Some(req) = requester
+                    && let Ok(roots) = req.request_roots(None).await
+                {
+                    let cwd = roots.first().and_then(|r| {
+                        r.uri.strip_prefix("file://").map(String::from)
+                    });
+                    if let Ok(mut ctx) = ctx_handle.write() {
+                        ctx.cwd = cwd;
+                    }
+                }
+            }
+        })
         .build();
 
     HelmsmanServer::router().register_all(
@@ -253,6 +288,12 @@ async fn handle_command(command: Commands) -> Result<(), Box<dyn std::error::Err
         }
         Commands::Tokens { files, total } => {
             cmd_tokens(&files, total)?;
+        }
+        Commands::Ping => {
+            anthropic::cmd_ping();
+        }
+        Commands::Hook { event, model, dump } => {
+            anthropic::cmd_hook(event.as_deref(), model.as_deref(), dump.as_deref())?;
         }
     }
     Ok(())
@@ -537,6 +578,7 @@ fn cmd_tokens(files: &[PathBuf], total_only: bool) -> Result<(), Box<dyn std::er
 
     Ok(())
 }
+
 
 fn print_tokens_if_requested(enabled: bool, text: &str) {
     if enabled {

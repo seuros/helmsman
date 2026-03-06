@@ -5,18 +5,35 @@ use crate::engine::{EngineError, ProjectContext, TemplateEngine};
 use crate::models::{ModelContext, ModelResolver, DEFAULT_MODEL_ID};
 use mcp_host::prelude::*;
 use serde_json::Value;
+use std::sync::{Arc, RwLock};
 
 /// Helmsman MCP server.
 pub struct HelmsmanServer {
     resolver: ModelResolver,
     engine: TemplateEngine,
+    /// Shared project context, populated by on_initialized hook from client roots.
+    project_ctx: Arc<RwLock<ProjectContext>>,
 }
 
 impl HelmsmanServer {
     /// Create a new helmsman server.
     pub fn new(config: &Config, engine: TemplateEngine) -> Self {
         let resolver = ModelResolver::new(config);
-        Self { resolver, engine }
+        Self {
+            resolver,
+            engine,
+            project_ctx: Arc::new(RwLock::new(ProjectContext::default())),
+        }
+    }
+
+    /// Shared project context handle (for the on_initialized hook).
+    pub fn project_ctx_handle(&self) -> Arc<RwLock<ProjectContext>> {
+        self.project_ctx.clone()
+    }
+
+    /// Read the current project context snapshot.
+    fn current_project_ctx(&self) -> ProjectContext {
+        self.project_ctx.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     fn model_context(&self, model_id: &str, tier_override: Option<&str>) -> ModelContext {
@@ -288,8 +305,9 @@ impl HelmsmanServer {
 
         let model_ctx = self.resolve_model(model_id);
         let tier = model_ctx.tier.clone();
+        let project_ctx = self.current_project_ctx();
 
-        match self.engine.render(model_ctx, None) {
+        match self.engine.render(model_ctx, Some(project_ctx)) {
             Ok(instructions) => prompt_with_description(
                 format!("Adaptive instructions for {} tier", tier),
                 vec![user_message(instructions)],
@@ -340,7 +358,9 @@ impl HelmsmanServer {
         let model_ctx = self.resolve_model(model_id);
         let tier = model_ctx.tier.clone();
 
-        match self.engine.render_skill(name, model_ctx, None) {
+        let project_ctx = self.current_project_ctx();
+
+        match self.engine.render_skill(name, model_ctx, Some(project_ctx)) {
             Ok(content) => prompt_with_description(
                 format!("Skill '{}' for {} tier", name, tier),
                 vec![user_message(content)],
@@ -385,8 +405,9 @@ impl HelmsmanServer {
 
         // Use default model for rendering
         let model_ctx = self.resolve_model(DEFAULT_MODEL_ID);
+        let project_ctx = self.current_project_ctx();
 
-        match self.engine.render_skill(name, model_ctx, None) {
+        match self.engine.render_skill(name, model_ctx, Some(project_ctx)) {
             Ok(rendered) => {
                 // Build markdown with header
                 let mut output = String::new();
