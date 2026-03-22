@@ -3,14 +3,14 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -24,8 +24,10 @@ jobs:
             os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
           - target: x86_64-apple-darwin
-            os: macos-15-intel
+            os: macos-latest
           - target: aarch64-apple-darwin
             os: macos-latest
 
@@ -48,37 +50,69 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-${{ matrix.target }}-cargo-
 
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package artifact
-        shell: bash
+      - name: Package
         run: |
-          BINARY=target/${{ matrix.target }}/release/helmsman
-          ARCHIVE=helmsman-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
-          tar -czf "$ARCHIVE" -C "$(dirname $BINARY)" "$(basename $BINARY)"
-          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+          cd target/${{ matrix.target }}/release
+          tar czvf ../../../helmsman-${{ github.ref_name }}-${{ matrix.target }}.tar.gz helmsman
+          cd ../../..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: helmsman-${{ matrix.target }}
-          path: ${{ env.ARCHIVE }}
+          path: helmsman-${{ github.ref_name }}-${{ matrix.target }}.tar.gz
           if-no-files-found: error
 
   release:
-    name: Create GitHub Release
+    name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
+      - uses: actions/checkout@v6
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
 
-      - name: Create release
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release
+          find artifacts -type f -name "*.tar.gz" -exec mv {} release/ \;
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > SHA256SUMS.txt
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*.tar.gz
-          generate_release_notes: true
+          name: ${{ github.ref_name }} - New Course Plotted
+          body: |
+            ## Helmsman ${{ github.ref_name }}
+
+            The navigator has recalibrated. New instructions are ready.
+
+            ### Installation
+
+            Download the appropriate binary for your platform and add it to your PATH.
+
+            ### Checksums
+
+            See `SHA256SUMS.txt` for verification.
+          files: release/*
+          draft: false
+          prerelease: false
