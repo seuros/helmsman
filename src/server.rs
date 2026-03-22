@@ -2,7 +2,7 @@
 
 use crate::config::Config;
 use crate::engine::{EngineError, ProjectContext, TemplateEngine};
-use crate::models::{ModelContext, ModelResolver, DEFAULT_MODEL_ID};
+use crate::models::{DEFAULT_MODEL_ID, ModelContext, ModelResolver};
 use mcp_host::prelude::*;
 use serde_json::Value;
 use std::sync::{Arc, RwLock};
@@ -33,7 +33,10 @@ impl HelmsmanServer {
 
     /// Read the current project context snapshot.
     fn current_project_ctx(&self) -> ProjectContext {
-        self.project_ctx.read().unwrap_or_else(|e| e.into_inner()).clone()
+        self.project_ctx
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     fn model_context(&self, model_id: &str, tier_override: Option<&str>) -> ModelContext {
@@ -116,9 +119,15 @@ impl HelmsmanServer {
         // Token summary at the end
         result.push('\n');
         if diff_tokens > 0 {
-            result.push_str(&format!("📉 {} tier saves {} tokens\n", tier_b_name, diff_tokens));
+            result.push_str(&format!(
+                "📉 {} tier saves {} tokens\n",
+                tier_b_name, diff_tokens
+            ));
         } else if diff_tokens < 0 {
-            result.push_str(&format!("📈 {} tier saves {} tokens\n", tier_a_name, -diff_tokens));
+            result.push_str(&format!(
+                "📈 {} tier saves {} tokens\n",
+                tier_a_name, -diff_tokens
+            ));
         } else {
             result.push_str("📊 Same token count\n");
         }
@@ -295,7 +304,11 @@ impl HelmsmanServer {
     /// - Monkey: Verbose step-by-step guidance (cheap tokens, needs help)
     #[mcp_prompt(
         name = "instructions",
-        argument(name = "model_id", description = "Model identifier (e.g., claude-opus-4-5-20251101)", required = true)
+        argument(
+            name = "model_id",
+            description = "Model identifier (e.g., claude-opus-4-5-20251101)",
+            required = true
+        )
     )]
     async fn instructions(&self, _ctx: Ctx<'_>, args: Value) -> PromptResult {
         let model_id = args
@@ -316,10 +329,9 @@ impl HelmsmanServer {
                 "Error",
                 vec![user_message(format!("Template not found: {}", name))],
             ),
-            Err(EngineError::RenderError(e)) => prompt_with_description(
-                "Error",
-                vec![user_message(format!("Render error: {}", e))],
-            ),
+            Err(EngineError::RenderError(e)) => {
+                prompt_with_description("Error", vec![user_message(format!("Render error: {}", e))])
+            }
             Err(EngineError::TierNotAllowed(msg)) => prompt_with_description(
                 "Error",
                 vec![user_message(format!("Tier not allowed: {}", msg))],
@@ -332,14 +344,19 @@ impl HelmsmanServer {
     /// Returns the skill content optimized for the model's capability tier.
     #[mcp_prompt(
         name = "skill",
-        argument(name = "name", description = "Skill name (e.g., commit, review)", required = true),
-        argument(name = "model_id", description = "Model identifier for tier resolution", required = false)
+        argument(
+            name = "name",
+            description = "Skill name (e.g., commit, review)",
+            required = true
+        ),
+        argument(
+            name = "model_id",
+            description = "Model identifier for tier resolution",
+            required = false
+        )
     )]
     async fn skill_prompt(&self, _ctx: Ctx<'_>, args: Value) -> PromptResult {
-        let name = args
-            .get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
 
         let model_id = args
             .get("model_id")
@@ -351,7 +368,10 @@ impl HelmsmanServer {
             let skills = self.engine.list_skills();
             return prompt_with_description(
                 "Available skills",
-                vec![user_message(format!("Available skills:\n{}", skills.join("\n")))],
+                vec![user_message(format!(
+                    "Available skills:\n{}",
+                    skills.join("\n")
+                ))],
             );
         }
 
@@ -371,7 +391,10 @@ impl HelmsmanServer {
             ),
             Err(EngineError::TierNotAllowed(msg)) => prompt_with_description(
                 "Error",
-                vec![user_message(format!("Skill not available for this tier: {}", msg))],
+                vec![user_message(format!(
+                    "Skill not available for this tier: {}",
+                    msg
+                ))],
             ),
             Err(e) => prompt_with_description(
                 "Error",
@@ -395,12 +418,21 @@ impl HelmsmanServer {
         mime_type = "text/markdown"
     )]
     async fn read_skill(&self, ctx: Ctx<'_>) -> ResourceResult {
-        let name = ctx.uri_params().get("name").map(|s| s.as_str()).unwrap_or("");
+        let name = ctx
+            .uri_params()
+            .get("name")
+            .map(|s| s.as_str())
+            .unwrap_or("");
 
         // Get skill metadata
         let skill = match self.engine.get_skill(name) {
             Ok(s) => s,
-            Err(_) => return Err(ResourceError::NotFound(format!("Skill not found: {}", name))),
+            Err(_) => {
+                return Err(ResourceError::NotFound(format!(
+                    "Skill not found: {}",
+                    name
+                )));
+            }
         };
 
         // Use default model for rendering
@@ -434,10 +466,10 @@ impl HelmsmanServer {
                 output.push_str("---\n\n");
                 output.push_str(&rendered);
 
-                Ok(vec![ResourceContent::text(
-                    format!("skill:///{}", name),
-                    output,
-                ).with_mime_type("text/markdown")])
+                Ok(vec![
+                    ResourceContent::text(format!("skill:///{}", name), output)
+                        .with_mime_type("text/markdown"),
+                ])
             }
             Err(e) => Err(ResourceError::NotFound(format!("Render error: {}", e))),
         }

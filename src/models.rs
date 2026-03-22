@@ -77,17 +77,13 @@ fn pattern_precedence(a: &str, b: &str) -> Ordering {
     let a_wc = wildcard_count(a);
     let b_wc = wildcard_count(b);
 
-    a_wc
-        .cmp(&b_wc) // fewer wildcards first
+    a_wc.cmp(&b_wc) // fewer wildcards first
         .then_with(|| b.len().cmp(&a.len())) // longer patterns first
         .then_with(|| a.cmp(b)) // stable tie-breaker
 }
 
 fn wildcard_count(pattern: &str) -> usize {
-    pattern
-        .chars()
-        .filter(|ch| matches!(ch, '*' | '?'))
-        .count()
+    pattern.chars().filter(|ch| matches!(ch, '*' | '?')).count()
 }
 
 /// Model context passed to templates.

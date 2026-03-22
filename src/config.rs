@@ -32,12 +32,10 @@ pub struct Config {
     pub defaults: DefaultsConfig,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct ServerConfig {
     pub templates_dir: Option<String>,
 }
-
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct DefaultsConfig {

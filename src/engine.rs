@@ -3,8 +3,8 @@
 use crate::environment::Environment;
 use crate::models::ModelContext;
 use crate::skills::{
-    is_partial_skill, parse_frontmatter, skill_name_from_path, SkillMeta, SKILL_EXTENSION,
-    SKILLS_DIR_NAME,
+    SKILL_EXTENSION, SKILLS_DIR_NAME, SkillMeta, is_partial_skill, parse_frontmatter,
+    skill_name_from_path,
 };
 use minijinja::Environment as JinjaEnv;
 use serde::Serialize;

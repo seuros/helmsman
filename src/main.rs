@@ -13,7 +13,7 @@ mod tokenizer;
 
 use clap::{Parser, Subcommand};
 use config::{Config, MCP_NAME, MCP_VERSION};
-use dialoguer::{theme::ColorfulTheme, Select};
+use dialoguer::{Select, theme::ColorfulTheme};
 use engine::TemplateEngine;
 use mcp_host::prelude::*;
 use models::DEFAULT_MODEL_ID;
@@ -244,9 +244,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(req) = requester
                     && let Ok(roots) = req.request_roots(None).await
                 {
-                    let cwd = roots.first().and_then(|r| {
-                        r.uri.strip_prefix("file://").map(String::from)
-                    });
+                    let cwd = roots
+                        .first()
+                        .and_then(|r| r.uri.strip_prefix("file://").map(String::from));
                     if let Ok(mut ctx) = ctx_handle.write() {
                         ctx.cwd = cwd;
                     }
@@ -394,7 +394,12 @@ async fn cmd_add(
         }
 
         let installed_path = fetcher.install_skill(skill, &dest_dir)?;
-        registry.record_install(&skill.name, &parsed.display_name(), installed_path, install_global)?;
+        registry.record_install(
+            &skill.name,
+            &parsed.display_name(),
+            installed_path,
+            install_global,
+        )?;
         println!("  ✓ {}", skill.name);
     }
 
@@ -492,7 +497,11 @@ fn cmd_migrate(force: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     for src_name in root_files {
         let dst_name = format!("{}.j2", src_name);
-        migrate_file(std::path::Path::new(src_name), std::path::Path::new(&dst_name), force)?;
+        migrate_file(
+            std::path::Path::new(src_name),
+            std::path::Path::new(&dst_name),
+            force,
+        )?;
     }
 
     // Migrate skills in .skills/ directory
@@ -517,7 +526,11 @@ fn cmd_migrate(force: bool) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Migrate a single file to .j2 template.
-fn migrate_file(src: &std::path::Path, dst: &std::path::Path, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn migrate_file(
+    src: &std::path::Path,
+    dst: &std::path::Path,
+    force: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     // Skip if source doesn't exist
     if !src.exists() {
         return Ok(());
@@ -559,8 +572,8 @@ fn cmd_tokens(files: &[PathBuf], total_only: bool) -> Result<(), Box<dyn std::er
 
     let mut grand_total = 0usize;
     for path in files {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("{}: {}", path.display(), e))?;
+        let content =
+            std::fs::read_to_string(path).map_err(|e| format!("{}: {}", path.display(), e))?;
         let count = tokenizer::count_tokens(&content);
         grand_total += count;
         if !total_only {
@@ -579,7 +592,6 @@ fn cmd_tokens(files: &[PathBuf], total_only: bool) -> Result<(), Box<dyn std::er
     Ok(())
 }
 
-
 fn print_tokens_if_requested(enabled: bool, text: &str) {
     if enabled {
         eprintln!("{} tokens", tokenizer::count_tokens(text));
@@ -597,9 +609,10 @@ fn exit_with_message(message: impl std::fmt::Display) -> ! {
 }
 
 fn registry_entry_or_exit(registry: &Registry, name: &str) -> SkillEntry {
-    registry.get(name).cloned().unwrap_or_else(|| {
-        exit_with_message(format!("Skill '{}' not found in registry", name))
-    })
+    registry
+        .get(name)
+        .cloned()
+        .unwrap_or_else(|| exit_with_message(format!("Skill '{}' not found in registry", name)))
 }
 
 fn skills_dest_dir(registry: &Registry, global: bool) -> PathBuf {

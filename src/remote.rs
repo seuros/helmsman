@@ -1,8 +1,8 @@
 //! Remote skill fetching from GitHub repositories.
 
 use crate::skills::{
-    is_partial_skill, parse_frontmatter, skill_name_from_path, SkillMeta, SKILL_EXTENSION,
-    SKILLS_DIR_NAME,
+    SKILL_EXTENSION, SKILLS_DIR_NAME, SkillMeta, is_partial_skill, parse_frontmatter,
+    skill_name_from_path,
 };
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -197,16 +197,15 @@ impl RemoteFetcher {
 
         // If subpath was a specific skill file, try that
         if let Some(sub) = subpath {
-            let specific = self
-                .repo_path
-                .join(format!("{}.{}", sub, SKILL_EXTENSION));
+            let specific = self.repo_path.join(format!("{}.{}", sub, SKILL_EXTENSION));
             if specific.is_file()
-                && let Some(name) = skill_name_from_path(&specific) {
-                    let skill = self.parse_skill_file(&name, &specific)?;
-                    if !skills.iter().any(|s| s.name == skill.name) {
-                        skills.push(skill);
-                    }
+                && let Some(name) = skill_name_from_path(&specific)
+            {
+                let skill = self.parse_skill_file(&name, &specific)?;
+                if !skills.iter().any(|s| s.name == skill.name) {
+                    skills.push(skill);
                 }
+            }
         }
 
         // Fallback: deep scan if nothing found in expected locations.

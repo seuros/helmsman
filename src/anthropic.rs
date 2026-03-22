@@ -84,7 +84,9 @@ pub fn cmd_hook(
         eprintln!(
             r#"  {{"hooks":{{"SessionStart":[{{"hooks":[{{"type":"command","command":"helmsman hook"}}]}}]}}}}"#
         );
-        eprintln!("Or test manually: echo '{{\"hook_event_name\":\"SessionStart\",...}}' | helmsman hook --event SessionStart");
+        eprintln!(
+            "Or test manually: echo '{{\"hook_event_name\":\"SessionStart\",...}}' | helmsman hook --event SessionStart"
+        );
         return Ok(());
     }
 
