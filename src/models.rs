@@ -35,8 +35,8 @@ impl ModelResolver {
             .collect();
 
         // Ensure deterministic precedence: more specific patterns match first.
-        // This prevents broad fallbacks (e.g., "gpt-5.2*") from overriding
-        // more specific entries like "gpt-5.2-xhigh*".
+        // This prevents broad fallbacks (e.g., "gpt-5.4*") from overriding
+        // more specific entries like "gpt-5.4-xhigh*".
         patterns.sort_by(|a, b| pattern_precedence(&a.raw, &b.raw));
 
         Self {
@@ -174,9 +174,9 @@ mod tests {
         let resolver = ModelResolver::new(&config);
 
         // Specific patterns should beat broad fallbacks.
-        assert_eq!(resolver.resolve("gpt-5.2-xhigh"), "agi");
-        assert_eq!(resolver.resolve("gpt-5.2-high"), "agi");
-        assert_eq!(resolver.resolve("gpt-5.2-mini"), "monkey");
-        assert_eq!(resolver.resolve("gpt-5.2"), "engineer");
+        assert_eq!(resolver.resolve("gpt-5.4-xhigh"), "agi");
+        assert_eq!(resolver.resolve("gpt-5.4-high"), "agi");
+        assert_eq!(resolver.resolve("gpt-5.4-mini"), "monkey");
+        assert_eq!(resolver.resolve("gpt-5.4"), "engineer");
     }
 }

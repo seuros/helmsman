@@ -18,12 +18,12 @@
 "claude-*-sonnet-*" = "engineer"
 "claude-*-haiku-*" = "monkey"
 
-# OpenAI GPT-5.2 (single model, 40 levels)
-"gpt-5.2-xhigh*" = "agi"
-"gpt-5.2-high*" = "agi"
-"gpt-5.2-medium*" = "engineer"
-"gpt-5.2-mini*" = "monkey"
-"gpt-5.2*" = "engineer"  # fallback for unknown levels
+# OpenAI GPT-5.4 (single model, 40 levels)
+"gpt-5.4-xhigh*" = "agi"
+"gpt-5.4-high*" = "agi"
+"gpt-5.4-medium*" = "engineer"
+"gpt-5.4-mini*" = "monkey"
+"gpt-5.4*" = "engineer"  # fallback for unknown levels
 
 # Google
 "gemini-*-pro*" = "engineer"
