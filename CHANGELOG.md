@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/seuros/helmsman/compare/v0.2.1...v0.2.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* **deps:** update mcp-host to 0.1.60 ([1c987d8](https://github.com/seuros/helmsman/commit/1c987d89c7d634ce9a314e15ea211b0be84b63ff))
+
 ## [0.2.1](https://github.com/seuros/helmsman/compare/v0.2.0...v0.2.1) (2026-07-14)
 
 
