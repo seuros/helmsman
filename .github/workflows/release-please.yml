@@ -5,6 +5,10 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to (re)build assets for'
+        required: false
 
 permissions:
   contents: write
@@ -28,8 +32,10 @@ jobs:
   build:
     name: Build ${{ matrix.target }}
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created }}
+    if: ${{ needs.release-please.outputs.release_created || inputs.tag }}
     runs-on: ${{ matrix.os }}
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -46,14 +52,14 @@ jobs:
             os: macos-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ env.TAG }}
 
+      # rust-toolchain.toml pins the toolchain, so add the cross target to the
+      # active toolchain instead of a separately-installed stable.
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+        run: rustup target add ${{ matrix.target }}
 
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -80,14 +86,14 @@ jobs:
       - name: Package
         run: |
           cd target/${{ matrix.target }}/release
-          tar czvf ../../../helmsman-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz helmsman
+          tar czvf ../../../helmsman-${{ env.TAG }}-${{ matrix.target }}.tar.gz helmsman
           cd ../../..
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: helmsman-${{ matrix.target }}
-          path: helmsman-${{ needs.release-please.outputs.tag_name }}-${{ matrix.target }}.tar.gz
+          path: helmsman-${{ env.TAG }}-${{ matrix.target }}.tar.gz
           if-no-files-found: error
 
   upload:
@@ -114,5 +120,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          gh release upload ${{ needs.release-please.outputs.tag_name }}
+          gh release upload ${{ needs.release-please.outputs.tag_name || inputs.tag }}
           release/* --clobber --repo ${{ github.repository }}
