@@ -254,8 +254,7 @@ mod tests {
     fn test_model_override_takes_precedence() {
         let data = serde_json::json!({ "model": "claude-haiku-4-5" });
 
-        let model = Some("claude-opus-4-6")
-            .map(String::from)
+        let model = Some(String::from("claude-opus-4-6"))
             .or_else(|| data["model"].as_str().map(String::from))
             .unwrap_or_else(|| DEFAULT_MODEL_ID.to_string());
         assert_eq!(model, "claude-opus-4-6");
