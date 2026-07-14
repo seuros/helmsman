@@ -1,7 +1,7 @@
 //! Skill registry and lock file management.
 
 use crate::skills::SKILLS_DIR_NAME;
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -23,7 +23,7 @@ pub struct SkillEntry {
     /// Source repository (e.g., "owner/repo")
     pub source: String,
     /// Installation timestamp
-    pub installed_at: DateTime<Utc>,
+    pub installed_at: Timestamp,
     /// Installed path (relative to skills dir or absolute)
     pub path: PathBuf,
     /// Whether this is a global or project-level install
@@ -68,7 +68,7 @@ impl SkillLock {
             name.to_string(),
             SkillEntry {
                 source: source.to_string(),
-                installed_at: Utc::now(),
+                installed_at: Timestamp::now(),
                 path,
                 global,
             },
@@ -208,6 +208,22 @@ mod tests {
         let entry = loaded.get("test-skill").unwrap();
         assert_eq!(entry.source, "owner/repo");
         assert!(entry.global);
+    }
+
+    #[test]
+    fn test_skill_lock_parses_chrono_era_timestamps() {
+        // Lock files written before the jiff migration store chrono-formatted
+        // RFC 3339 timestamps; they must keep loading.
+        let toml_src = r#"
+            [skills.legacy]
+            source = "owner/repo"
+            installed_at = "2026-07-01T12:34:56.789012Z"
+            path = "/path/to/skill.j2"
+            global = false
+        "#;
+
+        let lock: SkillLock = toml::from_str(toml_src).unwrap();
+        assert!(lock.has("legacy"));
     }
 
     #[test]
