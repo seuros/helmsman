@@ -133,6 +133,13 @@ pub struct RemoteSkill {
     pub description: Option<String>,
 }
 
+/// Push a skill unless one with the same name is already present.
+fn push_unique(skills: &mut Vec<RemoteSkill>, skill: RemoteSkill) {
+    if !skills.iter().any(|s| s.name == skill.name) {
+        skills.push(skill);
+    }
+}
+
 /// Clone a repository and discover skills.
 pub struct RemoteFetcher {
     temp_dir: TempDir,
@@ -191,7 +198,7 @@ impl RemoteFetcher {
 
         for dir in &search_dirs {
             if dir.is_dir() {
-                self.scan_directory(dir, &mut skills)?;
+                self.scan(dir, &mut skills, 0)?;
             }
         }
 
@@ -202,15 +209,13 @@ impl RemoteFetcher {
                 && let Some(name) = skill_name_from_path(&specific)
             {
                 let skill = self.parse_skill_file(&name, &specific)?;
-                if !skills.iter().any(|s| s.name == skill.name) {
-                    skills.push(skill);
-                }
+                push_unique(&mut skills, skill);
             }
         }
 
         // Fallback: deep scan if nothing found in expected locations.
         if skills.is_empty() {
-            self.scan_tree(&search_root, &mut skills, 0)?;
+            self.scan(&search_root, &mut skills, 12)?;
         }
 
         if skills.is_empty() {
@@ -222,40 +227,14 @@ impl RemoteFetcher {
         Ok(skills)
     }
 
-    fn scan_directory(&self, dir: &Path, skills: &mut Vec<RemoteSkill>) -> Result<(), RemoteError> {
-        let entries = match std::fs::read_dir(dir) {
-            Ok(e) => e,
-            Err(_) => return Ok(()),
-        };
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let Some(name) = skill_name_from_path(&path) else {
-                continue;
-            };
-            if is_partial_skill(&name) {
-                continue;
-            }
-
-            let skill = self.parse_skill_file(&name, &path)?;
-            if !skills.iter().any(|s| s.name == skill.name) {
-                skills.push(skill);
-            }
-        }
-
-        Ok(())
-    }
-
-    fn scan_tree(
+    /// Scan a directory for skill files, recursing into subdirectories while
+    /// `remaining_depth > 0` (0 = this directory only).
+    fn scan(
         &self,
         dir: &Path,
         skills: &mut Vec<RemoteSkill>,
-        depth: usize,
+        remaining_depth: usize,
     ) -> Result<(), RemoteError> {
-        if depth > 12 {
-            return Ok(());
-        }
-
         let entries = match std::fs::read_dir(dir) {
             Ok(e) => e,
             Err(_) => return Ok(()),
@@ -269,7 +248,9 @@ impl RemoteFetcher {
             }
 
             if path.is_dir() {
-                self.scan_tree(&path, skills, depth + 1)?;
+                if remaining_depth > 0 {
+                    self.scan(&path, skills, remaining_depth - 1)?;
+                }
                 continue;
             }
 
@@ -281,9 +262,7 @@ impl RemoteFetcher {
             }
 
             let skill = self.parse_skill_file(&name, &path)?;
-            if !skills.iter().any(|s| s.name == skill.name) {
-                skills.push(skill);
-            }
+            push_unique(skills, skill);
         }
 
         Ok(())

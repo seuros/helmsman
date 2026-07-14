@@ -12,9 +12,8 @@ mod skills;
 mod tokenizer;
 
 use clap::{Parser, Subcommand};
-use config::{Config, MCP_NAME, MCP_VERSION};
+use config::{MCP_NAME, MCP_VERSION};
 use dialoguer::{Select, theme::ColorfulTheme};
-use engine::TemplateEngine;
 use mcp_host::prelude::*;
 use models::DEFAULT_MODEL_ID;
 use registry::{Registry, SkillEntry};
@@ -145,17 +144,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return handle_command(command).await;
     }
 
-    // Load configuration
-    let config = Config::load()?;
-
-    // Get templates directory (current dir by default for CLI)
-    let templates_dir = config.templates_dir().unwrap_or_else(|_| ".".into());
-
-    // Initialize template engine
-    let engine = TemplateEngine::new(&templates_dir)?;
-
-    // Create helmsman server
-    let helmsman = HelmsmanServer::new(&config, engine);
+    // Load configuration and create helmsman server
+    let helmsman = HelmsmanServer::bootstrap()?;
 
     // CLI mode: list skills
     if cli.list {
@@ -438,16 +428,7 @@ fn cmd_update(name: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
         let parsed = ParsedSource::parse(&entry.source)?;
         let fetcher = RemoteFetcher::clone(&parsed)?;
         let dest_dir = skills_dest_dir(&registry, entry.global);
-
-        match fetcher.get_skill(skill_name, parsed.subpath.as_deref()) {
-            Ok(skill) => {
-                fetcher.install_skill(&skill, &dest_dir)?;
-                println!("  ✓ {}", skill_name);
-            }
-            Err(e) => {
-                eprintln!("  ✗ {}: {}", skill_name, e);
-            }
-        }
+        update_skill(&fetcher, &parsed, skill_name, &dest_dir)?;
     } else {
         let mut sources = std::collections::HashSet::new();
         for (_name, entry) in registry.list() {
@@ -472,21 +453,31 @@ fn cmd_update(name: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
 
             for (skill_name, entry) in entries {
                 let dest_dir = skills_dest_dir(&registry, entry.global);
-
-                match fetcher.get_skill(skill_name, parsed.subpath.as_deref()) {
-                    Ok(skill) => {
-                        fetcher.install_skill(&skill, &dest_dir)?;
-                        println!("  ✓ {}", skill_name);
-                    }
-                    Err(e) => {
-                        eprintln!("  ✗ {}: {}", skill_name, e);
-                    }
-                }
+                update_skill(&fetcher, &parsed, skill_name, &dest_dir)?;
             }
         }
     }
 
     println!("\n✨ Update complete!");
+    Ok(())
+}
+
+/// Fetch a skill from an already-cloned source and install it, reporting per-skill status.
+fn update_skill(
+    fetcher: &RemoteFetcher,
+    parsed: &ParsedSource,
+    skill_name: &str,
+    dest_dir: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    match fetcher.get_skill(skill_name, parsed.subpath.as_deref()) {
+        Ok(skill) => {
+            fetcher.install_skill(&skill, dest_dir)?;
+            println!("  ✓ {}", skill_name);
+        }
+        Err(e) => {
+            eprintln!("  ✗ {}: {}", skill_name, e);
+        }
+    }
     Ok(())
 }
 

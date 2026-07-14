@@ -3,8 +3,7 @@
 //! Hooks are only meaningful when running inside Claude Code.
 //! Use [`is_claude_code()`] to guard CC-specific behaviour.
 
-use crate::config::Config;
-use crate::engine::{self, TemplateEngine};
+use crate::engine;
 use crate::models::DEFAULT_MODEL_ID;
 use crate::server::HelmsmanServer;
 
@@ -124,6 +123,13 @@ pub fn cmd_hook(
     Ok(())
 }
 
+/// cd into the hook's project dir so skill/template search works from project root (best-effort).
+fn enter_project_dir(data: &serde_json::Value) {
+    if let Some(cwd) = data["cwd"].as_str() {
+        let _ = std::env::set_current_dir(cwd);
+    }
+}
+
 /// Handle the `SessionStart` hook event.
 ///
 /// Renders `AGENTS.md.j2` for the session model and emits it as
@@ -137,10 +143,7 @@ fn handle_session_start(
         .or_else(|| data["model"].as_str().map(String::from))
         .unwrap_or_else(|| DEFAULT_MODEL_ID.to_string());
 
-    // cd into project dir so skill/template search works from project root
-    if let Some(cwd) = data["cwd"].as_str() {
-        let _ = std::env::set_current_dir(cwd); // best-effort
-    }
+    enter_project_dir(data);
 
     // Persist useful session variables for Bash tool calls
     let _ = persist_env(&[
@@ -151,10 +154,7 @@ fn handle_session_start(
         ),
     ]);
 
-    let config = Config::load()?;
-    let templates_dir = config.templates_dir().unwrap_or_else(|_| ".".into());
-    let engine = TemplateEngine::new(&templates_dir)?;
-    let helmsman = HelmsmanServer::new(&config, engine);
+    let helmsman = HelmsmanServer::bootstrap()?;
 
     match helmsman.render_instructions(&model_id, None) {
         Ok(instructions) => {
@@ -180,16 +180,11 @@ fn handle_pre_compact(data: &serde_json::Value) -> Result<(), Box<dyn std::error
         return Ok(());
     }
 
-    if let Some(cwd) = data["cwd"].as_str() {
-        let _ = std::env::set_current_dir(cwd);
-    }
+    enter_project_dir(data);
 
     let model_id = std::env::var("HELMSMAN_MODEL").unwrap_or_else(|_| DEFAULT_MODEL_ID.to_string());
 
-    let config = Config::load()?;
-    let templates_dir = config.templates_dir().unwrap_or_else(|_| ".".into());
-    let engine = TemplateEngine::new(&templates_dir)?;
-    let helmsman = HelmsmanServer::new(&config, engine);
+    let helmsman = HelmsmanServer::bootstrap()?;
 
     if let Ok(instructions) = helmsman.render_instructions(&model_id, None) {
         let response = serde_json::json!({

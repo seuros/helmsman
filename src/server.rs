@@ -26,6 +26,14 @@ impl HelmsmanServer {
         }
     }
 
+    /// Load config and build a server with a template engine rooted at the configured dir.
+    pub fn bootstrap() -> Result<Self, Box<dyn std::error::Error>> {
+        let config = Config::load()?;
+        let templates_dir = config.templates_dir().unwrap_or_else(|_| ".".into());
+        let engine = TemplateEngine::new(&templates_dir)?;
+        Ok(Self::new(&config, engine))
+    }
+
     /// Shared project context handle (for the on_initialized hook).
     pub fn project_ctx_handle(&self) -> Arc<RwLock<ProjectContext>> {
         self.project_ctx.clone()
@@ -294,6 +302,13 @@ This diff will cost you 0 tokens. Obviously.
     }
 }
 
+/// Extract the `model_id` prompt argument, falling back to the default model.
+fn model_id_arg(args: &Value) -> &str {
+    args.get("model_id")
+        .and_then(|v| v.as_str())
+        .unwrap_or(DEFAULT_MODEL_ID)
+}
+
 #[mcp_router]
 impl HelmsmanServer {
     /// Get tailored instructions for the current model and project context.
@@ -311,10 +326,7 @@ impl HelmsmanServer {
         )
     )]
     async fn instructions(&self, _ctx: Ctx<'_>, args: Value) -> PromptResult {
-        let model_id = args
-            .get("model_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or(DEFAULT_MODEL_ID);
+        let model_id = model_id_arg(&args);
 
         let model_ctx = self.resolve_model(model_id);
         let tier = model_ctx.tier.clone();
@@ -357,11 +369,7 @@ impl HelmsmanServer {
     )]
     async fn skill_prompt(&self, _ctx: Ctx<'_>, args: Value) -> PromptResult {
         let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
-
-        let model_id = args
-            .get("model_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or(DEFAULT_MODEL_ID);
+        let model_id = model_id_arg(&args);
 
         if name.is_empty() {
             // List available skills

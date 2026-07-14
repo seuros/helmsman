@@ -119,22 +119,15 @@ impl TemplateEngine {
         let mut jinja = JinjaEnv::new();
         let base_path = canonical_dir.clone();
 
-        // Custom loader: first check base templates, then skill paths for includes
+        // Custom loader: base templates dir first (AGENTS.md.j2 etc),
+        // then skill paths (partials/includes)
         jinja.set_loader(move |name| {
-            // First check base templates dir (for AGENTS.md.j2 etc)
-            let path = base_path.join(name);
-            if let Ok(content) = std::fs::read_to_string(&path) {
-                return Ok(Some(content));
-            }
-
-            // Then search skill paths (for partials/includes)
-            for dir in &skill_paths {
+            for dir in std::iter::once(&base_path).chain(skill_paths.iter()) {
                 let path = dir.join(name);
                 if let Ok(content) = std::fs::read_to_string(&path) {
                     return Ok(Some(content));
                 }
             }
-
             Ok(None)
         });
 
