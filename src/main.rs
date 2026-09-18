@@ -224,7 +224,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // MCP server mode
     let project_ctx_handle = helmsman.project_ctx_handle();
     let helmsman = Arc::new(helmsman);
-    let server = mcp_host::server::builder::server(MCP_NAME, MCP_VERSION)
+    let server = Server::builder(MCP_NAME, MCP_VERSION)
         .with_instructions("Resources: skill:/// (list), skill:///{name} (render, default model).")
         .with_prompts(true)
         .with_resources(true, false)
