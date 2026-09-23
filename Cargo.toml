@@ -11,7 +11,7 @@ repository = "https://github.com/seuros/helmsman"
 documentation = "https://docs.rs/helmsman"
 
 [dependencies]
-mcp-host = { version = "0.5.1", features = ["macros"] }
+mcp-host = { version = "0.5.2", features = ["macros"] }
 minijinja = { version = "2", features = ["loader"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -47,7 +47,7 @@ cargo install helmsman
 
 ### Build from source
 
-Requires Rust 1.98 or newer. The repository pins Rust 1.98.0 for local and release builds.
+Requires Rust 1.98 or newer. The repository pins Rust 1.98.1 for local and release builds.
 From the Helmsman repository directory:
 
 ```bash
