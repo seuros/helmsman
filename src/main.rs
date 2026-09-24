@@ -4,6 +4,7 @@ mod anthropic;
 mod config;
 mod engine;
 mod environment;
+mod goals;
 mod models;
 mod registry;
 mod remote;
@@ -227,6 +228,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server = Server::builder(MCP_NAME, MCP_VERSION)
         .with_instructions("Resources: skill:/// (list), skill:///{name} (render, default model).")
         .with_prompts(true)
+        .with_tools(true)
         .with_resources(true, false)
         .on_initialized(move |_session_id, requester| {
             let ctx_handle = project_ctx_handle.clone();
@@ -251,6 +253,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         server.resource_manager(),
         helmsman,
     );
+    for tool in [
+        goals::GoalTool::Start,
+        goals::GoalTool::Get,
+        goals::GoalTool::Check,
+        goals::GoalTool::Pause,
+    ] {
+        server.tool_registry().register(tool);
+    }
     server.run(StdioTransport::new()).await?;
 
     Ok(())

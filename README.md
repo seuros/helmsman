@@ -57,6 +57,15 @@ cargo test --locked
 
 ## Quick Start
 
+### Goal gate (FreeChaOS)
+
+Configure Jev with `/reflex`, then ask the agent to use the goal gate.
+The flow is **work → check_goal → Jev verdict → model response**.
+Only the host can declare completion; the turn stays open for a reply.
+See [helmsman-goals(7)](man/helmsman-goals.7.md) for setup, protocol, and limits.
+
+### Instructions and skills
+
 1. Create `AGENTS.md.j2` in your project root
 
 2. Add to `.mcp.json`:
