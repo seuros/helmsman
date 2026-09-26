@@ -611,6 +611,7 @@ dependencies = [
  "tiktoken-rs",
  "tokio",
  "toml",
+ "uuid",
 ]
 
 [[package]]

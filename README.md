@@ -59,9 +59,10 @@ cargo test --locked
 
 ### Goal gate (FreeChaOS)
 
-Configure Jev with `/reflex`, then ask the agent to use the goal gate.
+Configure Jev with `/reflex`, then submit `/goal <request>`.
 The flow is **work → check_goal → Jev verdict → model response**.
-Only the host can declare completion; the turn stays open for a reply.
+Helmsman owns the lifecycle; the host journals it and supplies Jev verdicts.
+Read `goal://current` for status. The turn stays open for a reply.
 See [helmsman-goals(7)](man/helmsman-goals.7.md) for setup, protocol, and limits.
 
 ### Instructions and skills

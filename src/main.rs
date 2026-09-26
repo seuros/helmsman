@@ -225,17 +225,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // MCP server mode
     let project_ctx_handle = helmsman.project_ctx_handle();
     let helmsman = Arc::new(helmsman);
+    let goals = Arc::new(goals::Goals::default());
+    let initialized_goals = Arc::clone(&goals);
     let server = Server::builder(MCP_NAME, MCP_VERSION)
         .with_instructions("Resources: skill:/// (list), skill:///{name} (render, default model).")
         .with_prompts(true)
         .with_tools(true)
         .with_resources(true, false)
-        .on_initialized(move |_session_id, requester| {
+        .with_capability_hydrator(Arc::clone(&goals))
+        .on_initialized(move |session_id, requester| {
             let ctx_handle = project_ctx_handle.clone();
+            let goals = Arc::clone(&initialized_goals);
             async move {
-                if let Some(req) = requester
-                    && let Ok(roots) = req.request_roots(None).await
-                {
+                if let Some(req) = requester {
+                    goals.initialized(&session_id, req.clone());
+                    let Ok(roots) = req.request_roots(None).await else {
+                        return;
+                    };
                     let cwd = roots
                         .first()
                         .and_then(|r| r.uri.strip_prefix("file://").map(String::from));
@@ -253,14 +259,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         server.resource_manager(),
         helmsman,
     );
-    for tool in [
-        goals::GoalTool::Start,
-        goals::GoalTool::Get,
-        goals::GoalTool::Check,
-        goals::GoalTool::Pause,
-    ] {
-        server.tool_registry().register(tool);
+    for kind in goals::Kind::ALL {
+        server
+            .tool_registry()
+            .register(goals::GoalTool(kind, Arc::clone(&goals)));
     }
+    server
+        .resource_manager()
+        .register(goals::GoalResource(goals));
     server.run(StdioTransport::new()).await?;
 
     Ok(())

@@ -7,26 +7,42 @@ helmsman-goals - Jev-evaluated goals for FreeChaOS
 ## SETUP
 
 Connect Helmsman as an MCP server and configure Jev with `/reflex` in FreeChaOS.
-Explicitly ask the agent to start a goal with observable acceptance criteria:
+Submit `/goal <request>`. The model rephrases the request without weakening its
+scope, derives observable criteria, and calls `start_goal`. Bare `/goal` shows
+usage. Pasted text, mentions, and attachments use normal message submission.
+You can also explicitly request the gate:
 
 > Use the goal gate to fix this regression. Require the focused regression test
 > to pass and the affected package to compile. Call check_goal before replying.
 > Pause if you need my input.
 
-Helmsman is stateless. FreeChaOS owns the goal, evidence, credentials, and verdict.
-There is no `/goal` slash command, durable resume, scheduler, or idle wake-up.
+Helmsman owns the lifecycle, visibility, and status resource. FreeChaOS stores
+durable checkpoints and owns evidence, credentials, and evaluation.
+There is no driver database, scheduler, or automatic restart of work.
 
 ## TOOLS
 
 | Tool | Arguments | Purpose |
 |------|-----------|---------|
 | `start_goal` | `objective`, `criteria` | Start one goal per user turn |
-| `get_goal` | `{}` | Read host-owned status |
 | `check_goal` | `claim` | Evaluate a proposed conclusion against host evidence |
 | `pause_goal` | `{}` | Stop checking without claiming completion |
 
 The objective must be nonblank and at most 4096 UTF-8 bytes. Supply 1–8 nonblank
 criteria, each at most 1024 bytes. The claim may be empty; its limit is 8192 bytes.
+
+Read `goal://current` for the latest durable status. It retains terminal results
+and does not support subscriptions. `get_goal` is no longer a tool.
+
+| State | Visible tools |
+|-------|---------------|
+| Eligible turn, not started | `start_goal` |
+| Active | `check_goal`, `pause_goal` |
+| Checking | `pause_goal` |
+| Paused or complete in this turn | None |
+
+Restoration precedes discovery and direct calls. Hidden tools cannot be called
+directly. Visibility changes emit a coalesced `tools/list_changed` notification.
 
 ## LIFECYCLE
 
@@ -38,12 +54,14 @@ success is a status event, not a warning. This does not authorize unrelated work
 If the agent skips `check_goal`, the stop boundary checks after Stop hooks and
 returns the verdict for a wrap-up reply. The next stop does not repeat a terminal
 check. New non-goal tool evidence reopens a passed goal without resetting its
-budget. Goal-tool calls and results are not evidence.
+budget. Goal-tool calls/results and `goal://current` reads are not evidence.
 
 A goal belongs to one regular user turn. Starting again in that turn is rejected,
 even after pausing. New user input, abort, an explicit Stop-hook stop, or turn
-termination pauses unfinished work. `get_goal` can read the last in-memory status
-in later turns; restarting the harness loses it.
+termination fences unfinished work. The next driver refresh checkpoints a pause.
+Restarts preserve the goal definition, revisions, consumed checks, and terminal
+results. Interrupted active/checking goals become paused before tools are exposed.
+New or forked conversations do not inherit an actionable goal.
 
 ## EVALUATION
 
@@ -55,7 +73,7 @@ results pause the goal; paused does not mean complete.
 - Four checks total, shared by explicit checks and stop fallback.
 - At most three work continuations; terminal wrap-up spends no extra check.
 - Unchanged normalized evidence cannot earn another check.
-- Terminal checks return stored status; concurrent checks return `wait_for_check`.
+- Terminal checks are hidden; inspect the resource instead.
 - Each check has a 30-second overall deadline and no HTTP retries.
 
 The worker's answer is a claim, not evidence. Tool outputs remain untrusted,
@@ -69,40 +87,50 @@ Helmsman exposes the tools only to clients advertising:
 ```json
 {
   "experimental": {
-    "chaos/goals": {"version": 1, "client": "free_chaos", "check": true}
+    "chaos/goals": {"version": 2, "client": "free_chaos", "durable": true}
   }
 }
 ```
 
 `experimental` is MCP's custom-extension field, not a runtime mode.
 This is capability negotiation, not authentication. Direct calls are gated too.
-Older v1 clients without `"check":true` see only start, get, and pause.
+Older clients do not see goal tools or the status resource.
 
-Tools advertise `_meta["chaos/goals"] = {"version":1}`. Successful driver calls
-return `structuredContent["chaos/goals"]` with a command:
+Tools advertise `_meta["chaos/goals"] = {"version":2}`. The driver makes
+acknowledged server-to-client requests on `chaos/goals`:
 
 ```json
 {
-  "version": 1,
-  "policy": "jev-evidence-v1",
-  "command": {
-    "operation": "start",
-    "objective": "Fix the regression",
-    "criteria": ["The focused regression test passes"]
-  }
+  "version": 2,
+  "operation": "restore"
 }
 ```
 
-`get` and `pause` have no other fields. `check` requires a `claim` string.
-There is no worker-settable `complete` operation.
+- `restore` returns the last committed snapshot, current turn context, and an
+  interruption flag.
+- `checkpoint` takes `expected_revision` and `goal`. The snapshot contains `id`,
+  `turn_id`, `revision`, `objective`, `criteria`, `status`, `checks`, `reason`,
+  `attempt_id`, `evidence_digest`, and `verdict_ref`.
+- `evaluate` takes `revision` and `claim`. It requires a committed checking
+  snapshot with a consumed attempt. The host records a verdict bound to that
+  revision, attempt, and evidence before returning its reference.
 
-The host accepts only marked, discovered routes with the exact version, policy,
-tool name, and arguments. It replaces the command with host status before
-journaling. Any driver can implement the contract; its configured name is not
-special. The host supplies evidence, resolves credentials, calls Jev, and fences
-the verdict to the matching turn, revision, and evidence digest.
+The driver proposes → the host commits → the host acknowledges → the driver
+publishes state and visibility. Queuing a write is not a commit. Missing storage
+or an unconfirmed write fails closed; it never reports durable success.
+An identical checkpoint retry is idempotent; conflicting or stale revisions fail.
+After an uncertain acknowledgement, restore reconciles the committed state.
 
-Status includes `checking` and `next_action`: `work_then_check`, `wait_for_check`,
+Conversation and driver identities come from the configured transport, not model
+arguments. Checkpoints are structural journal entries, not model messages.
+Retired connections and late verdicts are rejected. Starting requires the exact
+arguments of an approved, discovered goal-tool call. Completion requires a
+matching host-recorded Jev verdict; neither tool arguments nor a driver claim can
+manufacture one. A conversation's goal remains bound to its original driver route.
+Any compatible driver may implement this contract; its configured name is not
+special.
+
+Tool results and the resource include `next_action`: `work_then_check`, `wait_for_check`,
 `respond`, `report_blocker`, or `none`. An assessment also returns `guidance`.
 Checking cannot create, resume, or reset a goal.
 
