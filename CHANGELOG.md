@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/seuros/helmsman/compare/v0.2.2...v0.3.0) (2026-10-03)
+
+
+### Features
+
+* add FreeChaOS goal gate ([16bfecc](https://github.com/seuros/helmsman/commit/16bfecc13b7ff0bbc49e0608bafb4290e3c73ef9))
+* persist driver-owned completion goals ([eb7f4e2](https://github.com/seuros/helmsman/commit/eb7f4e217614fa97b3c3ca1c970abf27c72b261e))
+
+
+### Bug Fixes
+
+* **resources:** emit compact skill catalog JSON ([574dee0](https://github.com/seuros/helmsman/commit/574dee0c7a78ca7f427504277a25ae6ade5e4fe7))
+
 ## [0.2.2](https://github.com/seuros/helmsman/compare/v0.2.1...v0.2.2) (2026-07-14)
 
 
