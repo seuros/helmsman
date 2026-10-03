@@ -415,7 +415,7 @@ impl HelmsmanServer {
     #[mcp_resource(uri = "skill:///", name = "skills", mime_type = "application/json")]
     async fn list_skills(&self, _ctx: Ctx<'_>) -> ResourceResult {
         let skills = self.engine.list_skills();
-        let json = serde_json::to_string_pretty(&skills).unwrap_or_else(|_| "[]".to_string());
+        let json = serde_json::to_string(&skills).unwrap_or_else(|_| "[]".to_string());
         Ok(vec![ResourceContent::text("skill:///", json)])
     }
 
