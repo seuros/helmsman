@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/seuros/helmsman/compare/v0.3.0...v0.3.1) (2026-10-16)
+
+
+### Bug Fixes
+
+* **mcp:** upgrade helmsman to mcp-host 0.12 ([aba454f](https://github.com/seuros/helmsman/commit/aba454fcb9ce5e94e12fdd59aaf47f4bdb51d189))
+
 ## [0.3.0](https://github.com/seuros/helmsman/compare/v0.2.2...v0.3.0) (2026-10-03)
 
 
