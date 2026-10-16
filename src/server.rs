@@ -15,6 +15,9 @@ pub struct HelmsmanServer {
     project_ctx: Arc<RwLock<ProjectContext>>,
 }
 
+#[cfg(test)]
+mod tests;
+
 impl HelmsmanServer {
     /// Create a new helmsman server.
     pub fn new(config: &Config, engine: TemplateEngine) -> Self {
@@ -415,8 +418,11 @@ impl HelmsmanServer {
     #[mcp_resource(uri = "skill:///", name = "skills", mime_type = "application/json")]
     async fn list_skills(&self, _ctx: Ctx<'_>) -> ResourceResult {
         let skills = self.engine.list_skills();
-        let json = serde_json::to_string(&skills).unwrap_or_else(|_| "[]".to_string());
-        Ok(vec![ResourceContent::text("skill:///", json)])
+        let json = serde_json::to_string(&skills)
+            .map_err(|error| ResourceError::Internal(error.to_string()))?;
+        Ok(vec![
+            ResourceContent::text("skill:///", json).with_mime_type("application/json"),
+        ])
     }
 
     /// Read and render a skill by name.
@@ -426,11 +432,7 @@ impl HelmsmanServer {
         mime_type = "text/markdown"
     )]
     async fn read_skill(&self, ctx: Ctx<'_>) -> ResourceResult {
-        let name = ctx
-            .uri_params()
-            .get("name")
-            .map(|s| s.as_str())
-            .unwrap_or("");
+        let name = ctx.get_uri_param("name").unwrap_or("");
 
         // Get skill metadata
         let skill = match self.engine.get_skill(name) {

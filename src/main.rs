@@ -253,20 +253,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .build();
 
-    HelmsmanServer::router().register_all(
+    HelmsmanServer::router()?.register_all(
         server.tool_registry(),
         server.prompt_manager(),
         server.resource_manager(),
         helmsman,
-    );
+    )?;
     for kind in goals::Kind::ALL {
         server
             .tool_registry()
-            .register(goals::GoalTool(kind, Arc::clone(&goals)));
+            .register(goals::GoalTool(kind, Arc::clone(&goals)))?;
     }
     server
         .resource_manager()
-        .register(goals::GoalResource(goals));
+        .register(goals::GoalResource(goals))?;
     server.run(StdioTransport::new()).await?;
 
     Ok(())

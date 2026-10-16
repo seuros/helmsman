@@ -67,8 +67,7 @@ pub struct Goals {
 
 fn supported(session: &Session) -> bool {
     session
-        .capabilities
-        .as_ref()
+        .capabilities()
         .and_then(|c| c.experimental.as_ref())
         .and_then(|c| c.get(CAPABILITY))
         .is_some_and(|c| {
@@ -231,17 +230,18 @@ impl Goals {
     }
 
     async fn refresh(&self, session: &Session) -> Result<Restored, String> {
-        let client = self.client(&session.id);
+        let client = self.client(session.id());
         let _serial = client.serial.lock().await;
         let requester = Self::requester(&client).await?;
         Self::restore(&requester, session).await
     }
 
     async fn execute(&self, kind: Kind, ctx: ExecutionContext<'_>) -> Result<Value, String> {
-        let client = self.client(&ctx.session.id);
+        let session = ctx.session;
+        let client = self.client(session.id());
         let serial = client.serial.lock().await;
         let requester = Self::requester(&client).await?;
-        let mut state = Self::restore(&requester, ctx.session).await?;
+        let mut state = Self::restore(&requester, session).await?;
         if !visible(kind, &state) {
             return Err("goal operation is not available".into());
         }
@@ -274,7 +274,7 @@ impl Goals {
                     evidence_digest: None,
                     verdict_ref: None,
                 };
-                Self::commit(&requester, ctx.session, &mut state, goal).await?;
+                Self::commit(&requester, session, &mut state, goal).await?;
             }
             Kind::Pause => {
                 if ctx.params != json!({}) {
@@ -284,7 +284,7 @@ impl Goals {
                 goal.revision = revision;
                 goal.status = Status::Paused;
                 goal.reason = "requested".into();
-                Self::commit(&requester, ctx.session, &mut state, goal).await?;
+                Self::commit(&requester, session, &mut state, goal).await?;
             }
             Kind::Check => {
                 let args: Check = serde_json::from_value(ctx.params)
@@ -306,7 +306,7 @@ impl Goals {
                 if let Some(reason) = reason {
                     goal.status = Status::Paused;
                     goal.reason = reason.into();
-                    Self::commit(&requester, ctx.session, &mut state, goal).await?;
+                    Self::commit(&requester, session, &mut state, goal).await?;
                 } else {
                     goal.status = Status::Checking;
                     goal.checks += 1;
@@ -315,9 +315,9 @@ impl Goals {
                     goal.verdict_ref = None;
                     goal.reason = "evaluating".into();
                     let attempt = goal.attempt_id.clone().ok_or("missing attempt")?;
-                    ctx.session.set_state(INFLIGHT, json!(attempt));
-                    let _attempt = Attempt(ctx.session, attempt);
-                    Self::commit(&requester, ctx.session, &mut state, goal.clone()).await?;
+                    session.set_state(INFLIGHT, json!(attempt));
+                    let _attempt = Attempt(session, attempt);
+                    Self::commit(&requester, session, &mut state, goal.clone()).await?;
                     drop(serial);
                     let result = Self::request(
                         &requester,
@@ -327,7 +327,7 @@ impl Goals {
                     )
                     .await;
                     let _serial = client.serial.lock().await;
-                    state = Self::restore(&requester, ctx.session).await?;
+                    state = Self::restore(&requester, session).await?;
                     if state.goal.as_ref() != Some(&goal) {
                         return Ok(status(&state));
                     }
@@ -362,7 +362,7 @@ impl Goals {
                             goal.reason = "evaluation_unavailable".into();
                         }
                     }
-                    Self::commit(&requester, ctx.session, &mut state, goal).await?;
+                    Self::commit(&requester, session, &mut state, goal).await?;
                 }
             }
         }
@@ -371,7 +371,7 @@ impl Goals {
 }
 
 impl CapabilityHydrator for Goals {
-    fn hydrate<'a>(&'a self, ctx: CapabilityHydrationContext) -> CapabilityHydrationFuture<'a> {
+    fn hydrate<'a>(&'a self, ctx: &'a CapabilityHydrationContext) -> CapabilityHydrationFuture<'a> {
         Box::pin(async move {
             if !supported(&ctx.session) {
                 return Ok(());
@@ -487,7 +487,7 @@ impl Resource for GoalResource {
                 .refresh(ctx.session)
                 .await
                 .map_err(ResourceError::Internal)?;
-            Ok(vec![self.text_content(&status(&state).to_string())])
+            Ok(vec![self.text_content(status(&state).to_string())])
         })
     }
 }

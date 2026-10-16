@@ -1,16 +1,24 @@
 use super::*;
+use mcp_host::prelude::{Implementation, ProtocolVersion};
 use mcp_host::registry::tools::ToolRegistry;
-use mcp_host::server::multiplexer::{ClientCapabilities, RequestMultiplexer};
+use mcp_host::server::multiplexer::RequestMultiplexer;
 use std::sync::atomic::{AtomicU8, Ordering};
 
 fn session() -> Session {
-    let mut session = Session::new();
-    session.capabilities = Some(
-        serde_json::from_value(json!({
-            "experimental":{CAPABILITY:{"version":VERSION,"client":"free_chaos","durable":true}}
-        }))
-        .unwrap(),
-    );
+    session_with_capabilities(json!({
+        "experimental":{CAPABILITY:{"version":VERSION,"client":"free_chaos","durable":true}}
+    }))
+}
+
+fn session_with_capabilities(capabilities: Value) -> Session {
+    let session = Session::new();
+    assert!(session.initialize(
+        Implementation::new("helmsman-test", "1"),
+        serde_json::from_value(capabilities).unwrap(),
+        ProtocolVersion::LATEST,
+        serde_json::from_value(json!({"tools": {"listChanged": true}, "logging": {}})).unwrap(),
+    ));
+    assert!(session.mark_ready());
     session
 }
 
@@ -68,8 +76,8 @@ fn host(goals: &Goals, session: &Session) -> Host {
     let mux = Arc::new(RequestMultiplexer::new());
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     goals.initialized(
-        &session.id,
-        ClientRequester::new(tx, Arc::clone(&mux), ClientCapabilities::default()),
+        session.id(),
+        ClientRequester::new(tx, Arc::clone(&mux), Arc::new(session.clone())),
     );
     let task = tokio::spawn(async move {
         while let Some(request) = rx.recv().await {
@@ -130,11 +138,13 @@ fn host(goals: &Goals, session: &Session) -> Host {
 
 #[tokio::test]
 async fn state_controls_listing_direct_calls_and_coalesced_notifications() {
-    let mut session = session();
+    let session = session();
     let goals = Arc::new(Goals::default());
     let registry = ToolRegistry::new();
     for kind in Kind::ALL {
-        registry.register(GoalTool(kind, Arc::clone(&goals)));
+        registry
+            .register(GoalTool(kind, Arc::clone(&goals)))
+            .unwrap();
     }
     let (sender, mut receiver) = mcp_host::server::NotificationSender::bounded(16);
     session.set_notification_channel(sender.clone());
@@ -251,7 +261,7 @@ async fn failed_commit_does_not_publish_and_lost_ack_is_restorable() {
         let host = host(&goals, &session);
         let mut state = goals.refresh(&session).await.unwrap();
         host.failure.store(failure, Ordering::SeqCst);
-        let requester = Goals::requester(&goals.client(&session.id)).await.unwrap();
+        let requester = Goals::requester(&goals.client(session.id())).await.unwrap();
         assert!(
             Goals::commit(&requester, &session, &mut state, goal(Status::Active))
                 .await
@@ -334,7 +344,7 @@ async fn restart_pauses_interrupted_work_without_refunding_checks() {
 #[test]
 fn unsupported_clients_and_unrestored_sessions_have_no_goal_tools() {
     let goals = Arc::new(Goals::default());
-    let mut session = session();
+    let session = session();
     assert!(
         !GoalTool(Kind::Start, Arc::clone(&goals)).is_visible(&VisibilityContext::new(&session))
     );
@@ -345,8 +355,8 @@ fn unsupported_clients_and_unrestored_sessions_have_no_goal_tools() {
         json!({"version":2,"client":"codex","durable":true}),
         json!({"version":2,"client":"free_chaos"}),
     ] {
-        session.capabilities =
-            Some(serde_json::from_value(json!({"experimental":{CAPABILITY:capability}})).unwrap());
+        let session = session_with_capabilities(json!({"experimental":{CAPABILITY:capability}}));
+        publish(&session, &empty());
         assert!(
             !GoalTool(Kind::Start, Arc::clone(&goals))
                 .is_visible(&VisibilityContext::new(&session))
