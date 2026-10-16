@@ -74,7 +74,7 @@ fn host(goals: &Goals, session: &Session) -> Host {
     let fault = Arc::clone(&failure);
     let verdict = Arc::clone(&evaluation);
     let mux = Arc::new(RequestMultiplexer::new());
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let (tx, mut rx) = tokio::sync::mpsc::channel(16);
     goals.initialized(
         session.id(),
         ClientRequester::new(tx, Arc::clone(&mux), Arc::new(session.clone())),
