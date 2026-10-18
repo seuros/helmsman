@@ -70,11 +70,7 @@ impl ParsedSource {
             // rest is "branch/path/to/file"
             let rest_parts: Vec<&str> = rest.split('/').collect();
             let git_ref = rest_parts.first().map(|s| s.to_string());
-            let subpath = if rest_parts.len() > 1 {
-                Some(rest_parts[1..].join("/"))
-            } else {
-                None
-            };
+            let subpath = if rest_parts.len() > 1 { Some(rest_parts[1..].join("/")) } else { None };
 
             return Ok(Self {
                 owner: parts[0].to_string(),
@@ -92,26 +88,14 @@ impl ParsedSource {
         let parts: Vec<&str> = input.split('/').collect();
 
         if parts.len() < 2 {
-            return Err(RemoteError::InvalidSource(format!(
-                "Expected owner/repo, got: {}",
-                input
-            )));
+            return Err(RemoteError::InvalidSource(format!("Expected owner/repo, got: {}", input)));
         }
 
         let owner = parts[0].to_string();
         let repo = parts[1].to_string();
-        let subpath = if parts.len() > 2 {
-            Some(parts[2..].join("/"))
-        } else {
-            None
-        };
+        let subpath = if parts.len() > 2 { Some(parts[2..].join("/")) } else { None };
 
-        Ok(Self {
-            owner,
-            repo,
-            subpath,
-            git_ref: None,
-        })
+        Ok(Self { owner, repo, subpath, git_ref: None })
     }
 
     /// Get the clone URL.
@@ -169,19 +153,13 @@ impl RemoteFetcher {
             return Err(RemoteError::CloneFailed(stderr.to_string()));
         }
 
-        Ok(Self {
-            temp_dir,
-            repo_path,
-        })
+        Ok(Self { temp_dir, repo_path })
     }
 
     /// Discover skills in the cloned repository.
     pub fn discover_skills(&self, subpath: Option<&str>) -> Result<Vec<RemoteSkill>, RemoteError> {
-        let search_root = if let Some(sub) = subpath {
-            self.repo_path.join(sub)
-        } else {
-            self.repo_path.clone()
-        };
+        let search_root =
+            if let Some(sub) = subpath { self.repo_path.join(sub) } else { self.repo_path.clone() };
 
         let mut skills = Vec::new();
 
@@ -190,11 +168,8 @@ impl RemoteFetcher {
         // 2. .skills/*.j2
         // 3. Root *.j2 files
 
-        let search_dirs = [
-            search_root.join("skills"),
-            search_root.join(SKILLS_DIR_NAME),
-            search_root.clone(),
-        ];
+        let search_dirs =
+            [search_root.join("skills"), search_root.join(SKILLS_DIR_NAME), search_root.clone()];
 
         for dir in &search_dirs {
             if dir.is_dir() {

@@ -39,10 +39,7 @@ impl ModelResolver {
         // more specific entries like "gpt-5.4-xhigh*".
         patterns.sort_by(|a, b| pattern_precedence(&a.raw, &b.raw));
 
-        Self {
-            patterns,
-            default_tier: config.defaults.tier.clone(),
-        }
+        Self { patterns, default_tier: config.defaults.tier.clone() }
     }
 
     /// Resolve a model ID to its tier name.
@@ -96,10 +93,7 @@ pub struct ModelContext {
 impl ModelContext {
     /// Create model context from ID and tier name.
     pub fn new(model_id: &str, tier_name: &str) -> Self {
-        Self {
-            id: model_id.to_string(),
-            tier: tier_name.to_string(),
-        }
+        Self { id: model_id.to_string(), tier: tier_name.to_string() }
     }
 }
 

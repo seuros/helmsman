@@ -109,9 +109,8 @@ impl TemplateEngine {
     /// Create a new template engine loading from the given directory.
     pub fn new(templates_dir: &Path) -> Result<Self, EngineError> {
         // Canonicalize to enable walking up the tree
-        let canonical_dir = templates_dir
-            .canonicalize()
-            .unwrap_or_else(|_| templates_dir.to_path_buf());
+        let canonical_dir =
+            templates_dir.canonicalize().unwrap_or_else(|_| templates_dir.to_path_buf());
 
         // Compute skill paths for the loader
         let skill_paths = Self::compute_skill_paths(&canonical_dir);
@@ -131,10 +130,7 @@ impl TemplateEngine {
             Ok(None)
         });
 
-        Ok(Self {
-            jinja,
-            templates_dir: canonical_dir,
-        })
+        Ok(Self { jinja, templates_dir: canonical_dir })
     }
 
     /// Render AGENTS.md.j2 with model and environment context.
@@ -209,11 +205,7 @@ impl TemplateEngine {
                 };
 
                 let (meta, body) = parse_frontmatter(&content);
-                let skill = Skill {
-                    id: name.to_string(),
-                    meta,
-                    content: body,
-                };
+                let skill = Skill { id: name.to_string(), meta, content: body };
 
                 // Filter by tier if specified
                 if let Some(t) = tier
@@ -234,11 +226,7 @@ impl TemplateEngine {
     pub fn get_skill(&self, name: &str) -> Result<Skill, EngineError> {
         let content = self.read_skill_raw(name)?;
         let (meta, body) = parse_frontmatter(&content);
-        Ok(Skill {
-            id: name.to_string(),
-            meta,
-            content: body,
-        })
+        Ok(Skill { id: name.to_string(), meta, content: body })
     }
 
     /// Read raw skill template content (project overrides user).

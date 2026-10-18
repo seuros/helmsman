@@ -196,11 +196,7 @@ fn read_cgroup() -> Option<String> {
 }
 
 fn has_binary(name: &str) -> bool {
-    Command::new("which")
-        .arg(name)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+    Command::new("which").arg(name).output().map(|o| o.status.success()).unwrap_or(false)
 }
 
 #[cfg(test)]

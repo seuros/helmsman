@@ -45,9 +45,7 @@ pub struct DefaultsConfig {
 
 impl Default for DefaultsConfig {
     fn default() -> Self {
-        Self {
-            tier: default_tier(),
-        }
+        Self { tier: default_tier() }
     }
 }
 
@@ -104,9 +102,7 @@ impl Config {
 
     /// Load models from embedded models.toml (compiled into binary)
     fn load_models() -> HashMap<String, String> {
-        toml::from_str::<ModelsFile>(EMBEDDED_MODELS)
-            .map(|m| m.models)
-            .unwrap_or_default()
+        toml::from_str::<ModelsFile>(EMBEDDED_MODELS).map(|m| m.models).unwrap_or_default()
     }
 
     /// Get the templates directory path.

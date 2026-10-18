@@ -28,10 +28,7 @@ pub fn persist_env(vars: &[(&str, &str)]) -> std::io::Result<()> {
     };
 
     use std::io::Write;
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)?;
+    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(&path)?;
     for (key, value) in vars {
         writeln!(file, "export {}={}", key, shell_escape(value))?;
     }
@@ -98,10 +95,7 @@ pub fn cmd_hook(
         let pretty = serde_json::from_str::<serde_json::Value>(&input)
             .map(|v| serde_json::to_string_pretty(&v).unwrap_or(input.clone()))
             .unwrap_or(input.clone());
-        let mut file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)?;
+        let mut file = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
         writeln!(file, "{}", pretty)?;
         writeln!(file, "---")?;
     }
@@ -148,10 +142,7 @@ fn handle_session_start(
     // Persist useful session variables for Bash tool calls
     let _ = persist_env(&[
         ("HELMSMAN_MODEL", &model_id),
-        (
-            "HELMSMAN_SESSION_ID",
-            data["session_id"].as_str().unwrap_or(""),
-        ),
+        ("HELMSMAN_SESSION_ID", data["session_id"].as_str().unwrap_or("")),
     ]);
 
     let helmsman = HelmsmanServer::bootstrap()?;

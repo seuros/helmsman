@@ -66,12 +66,7 @@ impl SkillLock {
     pub fn add(&mut self, name: &str, source: &str, path: PathBuf, global: bool) {
         self.skills.insert(
             name.to_string(),
-            SkillEntry {
-                source: source.to_string(),
-                installed_at: Timestamp::now(),
-                path,
-                global,
-            },
+            SkillEntry { source: source.to_string(), installed_at: Timestamp::now(), path, global },
         );
     }
 
@@ -97,10 +92,7 @@ impl SkillLock {
 
     /// List skills from a specific source.
     pub fn list_from_source(&self, source: &str) -> Vec<(&String, &SkillEntry)> {
-        self.skills
-            .iter()
-            .filter(|(_, entry)| entry.source == source)
-            .collect()
+        self.skills.iter().filter(|(_, entry)| entry.source == source).collect()
     }
 }
 
@@ -117,19 +109,13 @@ pub struct Registry {
 impl Registry {
     /// Create a new registry.
     pub fn new() -> Result<Self, RegistryError> {
-        let config_dir = dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("helmsman");
+        let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("helmsman");
 
         let lock_path = config_dir.join("skills.lock");
         let global_skills_dir = config_dir.join("skills");
         let lock = SkillLock::load(&lock_path)?;
 
-        Ok(Self {
-            lock_path,
-            lock,
-            global_skills_dir,
-        })
+        Ok(Self { lock_path, lock, global_skills_dir })
     }
 
     /// Get the global skills directory.
