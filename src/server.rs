@@ -22,11 +22,7 @@ impl HelmsmanServer {
     /// Create a new helmsman server.
     pub fn new(config: &Config, engine: TemplateEngine) -> Self {
         let resolver = ModelResolver::new(config);
-        Self {
-            resolver,
-            engine,
-            project_ctx: Arc::new(RwLock::new(ProjectContext::default())),
-        }
+        Self { resolver, engine, project_ctx: Arc::new(RwLock::new(ProjectContext::default())) }
     }
 
     /// Load config and build a server with a template engine rooted at the configured dir.
@@ -44,10 +40,7 @@ impl HelmsmanServer {
 
     /// Read the current project context snapshot.
     fn current_project_ctx(&self) -> ProjectContext {
-        self.project_ctx
-            .read()
-            .unwrap_or_else(|e| e.into_inner())
-            .clone()
+        self.project_ctx.read().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
     fn model_context(&self, model_id: &str, tier_override: Option<&str>) -> ModelContext {
@@ -130,15 +123,9 @@ impl HelmsmanServer {
         // Token summary at the end
         result.push('\n');
         if diff_tokens > 0 {
-            result.push_str(&format!(
-                "📉 {} tier saves {} tokens\n",
-                tier_b_name, diff_tokens
-            ));
+            result.push_str(&format!("📉 {} tier saves {} tokens\n", tier_b_name, diff_tokens));
         } else if diff_tokens < 0 {
-            result.push_str(&format!(
-                "📈 {} tier saves {} tokens\n",
-                tier_a_name, -diff_tokens
-            ));
+            result.push_str(&format!("📈 {} tier saves {} tokens\n", tier_a_name, -diff_tokens));
         } else {
             result.push_str("📊 Same token count\n");
         }
@@ -267,10 +254,7 @@ This diff will cost you 0 tokens. Obviously.
             _ => &["No differences. Same tier.\n"],
         };
 
-        variants
-            .choose(&mut rand::rng())
-            .unwrap_or(&"No diff.\n")
-            .to_string()
+        variants.choose(&mut rand::rng()).unwrap_or(&"No diff.\n").to_string()
     }
 
     /// Render a skill from .skills/{name}.j2 (hierarchical search)
@@ -307,9 +291,7 @@ This diff will cost you 0 tokens. Obviously.
 
 /// Extract the `model_id` prompt argument, falling back to the default model.
 fn model_id_arg(args: &Value) -> &str {
-    args.get("model_id")
-        .and_then(|v| v.as_str())
-        .unwrap_or(DEFAULT_MODEL_ID)
+    args.get("model_id").and_then(|v| v.as_str()).unwrap_or(DEFAULT_MODEL_ID)
 }
 
 #[mcp_router]
@@ -379,10 +361,7 @@ impl HelmsmanServer {
             let skills = self.engine.list_skills();
             return prompt_with_description(
                 "Available skills",
-                vec![user_message(format!(
-                    "Available skills:\n{}",
-                    skills.join("\n")
-                ))],
+                vec![user_message(format!("Available skills:\n{}", skills.join("\n")))],
             );
         }
 
@@ -402,10 +381,7 @@ impl HelmsmanServer {
             ),
             Err(EngineError::TierNotAllowed(msg)) => prompt_with_description(
                 "Error",
-                vec![user_message(format!(
-                    "Skill not available for this tier: {}",
-                    msg
-                ))],
+                vec![user_message(format!("Skill not available for this tier: {}", msg))],
             ),
             Err(e) => prompt_with_description(
                 "Error",
@@ -438,10 +414,7 @@ impl HelmsmanServer {
         let skill = match self.engine.get_skill(name) {
             Ok(s) => s,
             Err(_) => {
-                return Err(ResourceError::NotFound(format!(
-                    "Skill not found: {}",
-                    name
-                )));
+                return Err(ResourceError::NotFound(format!("Skill not found: {}", name)));
             }
         };
 

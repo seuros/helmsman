@@ -12,7 +12,6 @@ mod server;
 mod skills;
 mod tokenizer;
 
-use clap::{Parser, Subcommand};
 use config::{MCP_NAME, MCP_VERSION};
 use dialoguer::{Select, theme::ColorfulTheme};
 use mcp_host::prelude::*;
@@ -23,48 +22,49 @@ use server::HelmsmanServer;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[derive(Parser)]
-#[command(name = "helmsman")]
-#[command(version)]
-#[command(about = "Adaptive instruction server")]
+#[derive(usage_rs::Cli)]
+#[usage(bin = "helmsman")]
+#[usage(version)]
+#[usage(about = "Adaptive instruction server")]
+#[usage(unknown_flags = "error", args_override_self = false)]
 struct Cli {
-    #[command(subcommand)]
+    #[usage(subcommand)]
     command: Option<Commands>,
 
     /// Print instructions for a model and exit
-    #[arg(short, long)]
+    #[usage(short, long)]
     instructions: Option<Option<String>>,
 
     /// Render a skill from .skills/{name}.j2
-    #[arg(short, long, value_name = "NAME")]
+    #[usage(short, long, value_name = "NAME")]
     skill: Option<String>,
 
     /// Model ID (used with --skill)
-    #[arg(short, long, default_value_t = DEFAULT_MODEL_ID.to_string())]
+    #[usage(short, long, default_value_t = DEFAULT_MODEL_ID.to_string(), default = "claude-4-5-sonnet")]
     model: String,
 
     /// Override tier regardless of model mapping (agi, engineer, monkey)
-    #[arg(long, value_name = "TIER")]
+    #[usage(long, value_name = "TIER")]
     tier: Option<String>,
 
     /// Show diff against another tier (e.g., --diff engineer)
-    #[arg(long, value_name = "TIER")]
+    #[usage(long, value_name = "TIER")]
     diff: Option<String>,
 
     /// Show token count of rendered output
-    #[arg(short, long)]
+    #[usage(short, long)]
     tokens: bool,
 
     /// List available skills
-    #[arg(short, long)]
+    #[usage(short, long)]
     list: bool,
 
     /// Validate all skills (check for broken includes)
-    #[arg(long)]
+    #[usage(long)]
     validate: bool,
 }
 
-#[derive(Subcommand)]
+#[derive(usage_rs::Subcommands)]
 enum Commands {
     /// Add skills from a remote repository
     Add {
@@ -72,19 +72,19 @@ enum Commands {
         source: String,
 
         /// List available skills without installing
-        #[arg(long)]
+        #[usage(long)]
         list: bool,
 
         /// Install to global directory (~/.config/helmsman/skills)
-        #[arg(short, long)]
+        #[usage(short, long)]
         global: bool,
 
         /// Install to project directory (.skills)
-        #[arg(long)]
+        #[usage(long)]
         local: bool,
 
         /// Specific skill(s) to install
-        #[arg(short, long)]
+        #[usage(short, long)]
         skill: Vec<String>,
     },
 
@@ -103,7 +103,7 @@ enum Commands {
     /// Migrate static markdown to templates
     Migrate {
         /// Overwrite existing .j2 files
-        #[arg(short, long)]
+        #[usage(short, long)]
         force: bool,
     },
 
@@ -113,7 +113,7 @@ enum Commands {
         files: Vec<PathBuf>,
 
         /// Print total only (no per-file breakdown)
-        #[arg(short, long)]
+        #[usage(short, long)]
         total: bool,
     },
 
@@ -123,15 +123,15 @@ enum Commands {
     /// Handle Claude Code lifecycle hook events
     Hook {
         /// Override hook event (for testing without piping JSON)
-        #[arg(long, value_name = "EVENT")]
+        #[usage(long, value_name = "EVENT")]
         event: Option<String>,
 
         /// Override model ID
-        #[arg(short, long, value_name = "MODEL")]
+        #[usage(short, long, value_name = "MODEL")]
         model: Option<String>,
 
         /// Dump raw hook JSON to file (for debugging payloads)
-        #[arg(long, value_name = "FILE")]
+        #[usage(long, value_name = "FILE")]
         dump: Option<PathBuf>,
     },
 }
@@ -233,6 +233,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_tools(true)
         .with_resources(true, false)
         .with_capability_hydrator(Arc::clone(&goals))
+        // Default timeout (120s) stops a pathological template render (e.g.
+        // a runaway include loop) from hanging the one stdio session forever.
+        .with_circuit_breaker(mcp_host::prelude::ToolBreakerConfig::default())
+        // Bounded request/notification queues: a flood of client calls gets
+        // JSON-RPC errors instead of deadlocking the transport.
+        .with_runtime_config(mcp_host::prelude::ServerRuntimeConfig::default())
         .on_initialized(move |session_id, requester| {
             let ctx_handle = project_ctx_handle.clone();
             let goals = Arc::clone(&initialized_goals);
@@ -274,13 +280,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        Commands::Add {
-            source,
-            list,
-            global,
-            local,
-            skill,
-        } => {
+        Commands::Add { source, list, global, local, skill } => {
             cmd_add(&source, list, global, local, &skill).await?;
         }
         Commands::Remove { name } => {
@@ -324,10 +324,7 @@ async fn cmd_add(
     let skills = match fetcher.discover_skills(parsed.subpath.as_deref()) {
         Ok(skills) => skills,
         Err(remote::RemoteError::NoSkillsFound) => {
-            eprintln!(
-                "No skills found in repository (scanned {})",
-                fetcher.temp_path().display()
-            );
+            eprintln!("No skills found in repository (scanned {})", fetcher.temp_path().display());
             return Ok(());
         }
         Err(e) => return Err(e.into()),
@@ -355,10 +352,7 @@ async fn cmd_add(
     let skills_to_install: Vec<_> = if specific_skills.is_empty() {
         skills
     } else {
-        skills
-            .into_iter()
-            .filter(|s| specific_skills.contains(&s.name))
-            .collect()
+        skills.into_iter().filter(|s| specific_skills.contains(&s.name)).collect()
     };
 
     if skills_to_install.is_empty() {
@@ -387,11 +381,7 @@ async fn cmd_add(
     let dest_dir = skills_dest_dir(&registry, install_global);
 
     // Install skills
-    println!(
-        "\nInstalling {} skill(s) to {}...",
-        skills_to_install.len(),
-        dest_dir.display()
-    );
+    println!("\nInstalling {} skill(s) to {}...", skills_to_install.len(), dest_dir.display());
 
     for skill in &skills_to_install {
         if registry.is_installed(&skill.name) {
@@ -504,11 +494,7 @@ fn cmd_migrate(force: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     for src_name in root_files {
         let dst_name = format!("{}.j2", src_name);
-        migrate_file(
-            std::path::Path::new(src_name),
-            std::path::Path::new(&dst_name),
-            force,
-        )?;
+        migrate_file(std::path::Path::new(src_name), std::path::Path::new(&dst_name), force)?;
     }
 
     // Migrate skills in .skills/ directory
@@ -623,9 +609,5 @@ fn registry_entry_or_exit(registry: &Registry, name: &str) -> SkillEntry {
 }
 
 fn skills_dest_dir(registry: &Registry, global: bool) -> PathBuf {
-    if global {
-        registry.global_skills_dir().to_path_buf()
-    } else {
-        Registry::project_skills_dir()
-    }
+    if global { registry.global_skills_dir().to_path_buf() } else { Registry::project_skills_dir() }
 }
