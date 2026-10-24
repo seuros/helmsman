@@ -1,16 +1,6 @@
 //! Helmsman - Adaptive instruction server.
 
-mod anthropic;
-mod config;
-mod engine;
-mod environment;
-mod goals;
-mod models;
-mod registry;
-mod remote;
-mod server;
-mod skills;
-mod tokenizer;
+use helmsman::{anthropic, config, goals, models, registry, remote, server, skills, tokenizer};
 
 use config::{MCP_NAME, MCP_VERSION};
 use dialoguer::{Select, theme::ColorfulTheme};

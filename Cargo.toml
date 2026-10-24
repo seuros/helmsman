@@ -11,21 +11,51 @@ repository = "https://github.com/seuros/helmsman"
 documentation = "https://docs.rs/helmsman"
 
 [dependencies]
-mcp-host = { version = "0.14.0", features = ["macros"] }
+# Core (always-on): engine/models/config/skills/environment depend only on these.
 minijinja = { version = "2", features = ["loader"] }
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-uuid = { version = "1", features = ["v4"] }
 toml = "1"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 dirs = "7"
 glob = "0.3"
 thiserror = "2"
-usage-rs = "7.0.0"
-tiktoken-rs = "0.12"
 serde_yaml = "0.9"
-similar = "3.2"
-rand = "0.10"
-tempfile = "3"
-dialoguer = "0.12"
-jiff = { version = "0.2.37", features = ["serde"] }
+
+# CLI/MCP-binary-only, gated behind the `cli` feature.
+mcp-host = { version = "0.14.0", features = ["macros"], optional = true }
+serde_json = { version = "1", optional = true }
+uuid = { version = "1", features = ["v4"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+usage-rs = { version = "7.0.0", optional = true }
+tiktoken-rs = { version = "0.12", optional = true }
+similar = { version = "3.2", optional = true }
+rand = { version = "0.10", optional = true }
+tempfile = { version = "3", optional = true }
+dialoguer = { version = "0.12", optional = true }
+jiff = { version = "0.2.37", features = ["serde"], optional = true }
+
+[features]
+default = ["cli"]
+cli = [
+    "mcp-host",
+    "serde_json",
+    "uuid",
+    "tokio",
+    "usage-rs",
+    "tiktoken-rs",
+    "similar",
+    "rand",
+    "tempfile",
+    "dialoguer",
+    "jiff",
+]
+
+[[bin]]
+name = "helmsman"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true

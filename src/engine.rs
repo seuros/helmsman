@@ -40,6 +40,14 @@ impl Skill {
     }
 }
 
+/// Where a `TemplateEngine` reads skills from.
+enum SkillSource {
+    /// Walk `.skills/` directories on disk (project overrides user, etc).
+    Dirs,
+    /// Serve skills baked into the binary at compile time: `(name, raw content)`.
+    Embedded(Vec<(String, String)>),
+}
+
 /// Project context passed to templates.
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ProjectContext {
@@ -60,6 +68,7 @@ struct TemplateContext {
 pub struct TemplateEngine {
     jinja: JinjaEnv<'static>,
     templates_dir: std::path::PathBuf,
+    source: SkillSource,
 }
 
 impl TemplateEngine {
@@ -130,7 +139,19 @@ impl TemplateEngine {
             Ok(None)
         });
 
-        Ok(Self { jinja, templates_dir: canonical_dir })
+        Ok(Self { jinja, templates_dir: canonical_dir, source: SkillSource::Dirs })
+    }
+
+    /// Build an engine serving skills from an in-memory set instead of a `.skills/`
+    /// directory. Intended for a consumer crate that embeds `.skills/*.j2` content
+    /// via `include_str!` so it works regardless of the binary's runtime cwd.
+    pub fn from_embedded_skills(skills: &[(&str, &str)]) -> Self {
+        let embedded = skills.iter().map(|(n, c)| (n.to_string(), c.to_string())).collect();
+        Self {
+            jinja: JinjaEnv::new(),
+            templates_dir: std::path::PathBuf::new(),
+            source: SkillSource::Embedded(embedded),
+        }
     }
 
     /// Render AGENTS.md.j2 with model and environment context.
@@ -177,6 +198,27 @@ impl TemplateEngine {
 
     /// Get skills with metadata, optionally filtered by tier.
     pub fn get_skills(&self, tier: Option<&str>) -> Vec<Skill> {
+        let mut skills = match &self.source {
+            SkillSource::Dirs => self.get_skills_from_dirs(),
+            SkillSource::Embedded(map) => map
+                .iter()
+                .map(|(name, content)| {
+                    let (meta, body) = parse_frontmatter(content);
+                    Skill { id: name.clone(), meta, content: body }
+                })
+                .collect(),
+        };
+
+        if let Some(t) = tier {
+            skills.retain(|skill| skill.is_available_for_tier(t));
+        }
+
+        skills.sort_by(|a, b| a.id.cmp(&b.id));
+        skills
+    }
+
+    /// Walk `.skills/` directories on disk, deduping by name (project overrides user).
+    fn get_skills_from_dirs(&self) -> Vec<Skill> {
         let mut seen = std::collections::HashSet::new();
         let mut skills = Vec::new();
 
@@ -205,28 +247,31 @@ impl TemplateEngine {
                 };
 
                 let (meta, body) = parse_frontmatter(&content);
-                let skill = Skill { id: name.to_string(), meta, content: body };
-
-                // Filter by tier if specified
-                if let Some(t) = tier
-                    && !skill.is_available_for_tier(t)
-                {
-                    continue;
-                }
-
-                skills.push(skill);
+                skills.push(Skill { id: name.to_string(), meta, content: body });
             }
         }
 
-        skills.sort_by(|a, b| a.id.cmp(&b.id));
         skills
     }
 
     /// Get a single skill by name with metadata.
     pub fn get_skill(&self, name: &str) -> Result<Skill, EngineError> {
-        let content = self.read_skill_raw(name)?;
-        let (meta, body) = parse_frontmatter(&content);
-        Ok(Skill { id: name.to_string(), meta, content: body })
+        match &self.source {
+            SkillSource::Dirs => {
+                let content = self.read_skill_raw(name)?;
+                let (meta, body) = parse_frontmatter(&content);
+                Ok(Skill { id: name.to_string(), meta, content: body })
+            }
+            SkillSource::Embedded(map) => {
+                let content = map
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, c)| c.as_str())
+                    .ok_or_else(|| EngineError::TemplateNotFound(name.to_string()))?;
+                let (meta, body) = parse_frontmatter(content);
+                Ok(Skill { id: name.to_string(), meta, content: body })
+            }
+        }
     }
 
     /// Read raw skill template content (project overrides user).
