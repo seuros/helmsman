@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/seuros/helmsman/compare/v0.3.0...v0.4.0) (2026-10-24)
+
+
+### Features
+
+* split core lib from cli binary ([5f7c5e0](https://github.com/seuros/helmsman/commit/5f7c5e03207f5120925e20ccbdb58518489200ef))
+
+
+### Bug Fixes
+
+* **deps:** refresh Helmsman dependencies ([464e3e3](https://github.com/seuros/helmsman/commit/464e3e31b9a92b41831b8391b598feb695d451b3))
+* **mcp:** upgrade helmsman to mcp-host 0.12 ([aba454f](https://github.com/seuros/helmsman/commit/aba454fcb9ce5e94e12fdd59aaf47f4bdb51d189))
+
 ## [0.3.0](https://github.com/seuros/helmsman/compare/v0.2.2...v0.3.0) (2026-10-03)
 
 
