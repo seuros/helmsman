@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/seuros/helmsman/compare/v0.4.0...v0.4.1) (2026-10-28)
+
+
+### Bug Fixes
+
+* **deps:** release mcp-host 0.15.0 upgrade ([efc0771](https://github.com/seuros/helmsman/commit/efc077108afe2a7bc75793c0ca6f8866edf5076b))
+
 ## [0.4.0](https://github.com/seuros/helmsman/compare/v0.3.0...v0.4.0) (2026-10-24)
 
 
