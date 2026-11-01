@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.seuros/helmsman",
+  "title": "Helmsman",
+  "description": "Adaptive instruction server: serves agent instructions and skills tuned to the calling model",
+  "repository": {
+    "url": "https://github.com/seuros/helmsman",
+    "source": "github",
+    "id": "1136354010"
+  },
+  "websiteUrl": "https://github.com/seuros/helmsman",
+  "version": "0.4.1",
+  "packages": [
+    {
+      "registryType": "cargo",
+      "registryBaseUrl": "https://crates.io",
+      "identifier": "helmsman",
+      "version": "0.4.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

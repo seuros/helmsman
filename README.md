@@ -198,3 +198,5 @@ Helmsman is infrastructure, not a product.
 ## License
 
 BSD-3-Clause
+
+mcp-name: io.github.seuros/helmsman
