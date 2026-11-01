@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/seuros/helmsman/compare/v0.4.1...v0.5.0) (2026-11-01)
+
+
+### Features
+
+* list in the MCP registry ([dbd8800](https://github.com/seuros/helmsman/commit/dbd8800b95ddbd26fe1ebd426cec0c3c2ccf1f29))
+
 ## [0.4.1](https://github.com/seuros/helmsman/compare/v0.4.0...v0.4.1) (2026-10-28)
 
 
