@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/seuros/helmsman/compare/v0.5.1...v0.5.2) (2026-11-05)
+
+
+### Bug Fixes
+
+* update MCP host dependency to 0.20 ([62bda37](https://github.com/seuros/helmsman/commit/62bda37502445b9eddda057dc75c3a3e25c6c431))
+
 ## [0.5.1](https://github.com/seuros/helmsman/compare/v0.5.0...v0.5.1) (2026-11-03)
 
 
