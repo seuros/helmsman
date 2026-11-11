@@ -9,13 +9,13 @@
     "id": "1136354010"
   },
   "websiteUrl": "https://github.com/seuros/helmsman",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "packages": [
     {
       "registryType": "cargo",
       "registryBaseUrl": "https://crates.io",
       "identifier": "helmsman",
-      "version": "0.5.2",
+      "version": "0.5.3",
       "transport": {
         "type": "stdio"
       }
