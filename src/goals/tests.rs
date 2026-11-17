@@ -1,4 +1,5 @@
 use super::*;
+use mcp_goals::Context;
 use mcp_host::prelude::{Implementation, ProtocolVersion};
 use mcp_host::registry::tools::ToolRegistry;
 use mcp_host::server::multiplexer::RequestMultiplexer;

@@ -738,6 +738,7 @@ dependencies = [
  "dirs",
  "glob",
  "jiff",
+ "mcp-goals",
  "mcp-host",
  "minijinja",
  "rand",
@@ -1004,6 +1005,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1525a2a28c7f4fa0fc98bb91ae755d1e2d1505079e05539e35bc876b5d65ae9"
 dependencies = [
  "regex-automata",
+]
+
+[[package]]
+name = "mcp-goals"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aefa634b709f849e520f101bebf8bf84a2ac2cfe02ecad2655a6dcacd99bac54"
+dependencies = [
+ "serde",
+ "serde_json",
+ "state-machines",
 ]
 
 [[package]]

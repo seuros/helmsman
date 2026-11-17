@@ -221,7 +221,7 @@ impl Goals {
         {
             state.interrupted = true;
         }
-        if let Some(goal) = state.reconcile() {
+        if let Some(goal) = reconcile(&state) {
             Self::commit(requester, session, &mut state, goal).await?;
         } else {
             publish(session, &state);
@@ -282,8 +282,7 @@ impl Goals {
                 }
                 let mut goal = state.goal.clone().ok_or("no goal")?;
                 goal.revision = revision;
-                goal.status = Status::Paused;
-                goal.reason = "requested".into();
+                advance(&mut goal, GoalLifecycleEvent::Pause(true), "requested")?;
                 Self::commit(&requester, session, &mut state, goal).await?;
             }
             Kind::Check => {
@@ -304,16 +303,14 @@ impl Goals {
                     None
                 };
                 if let Some(reason) = reason {
-                    goal.status = Status::Paused;
-                    goal.reason = reason.into();
+                    advance(&mut goal, GoalLifecycleEvent::Pause(true), reason)?;
                     Self::commit(&requester, session, &mut state, goal).await?;
                 } else {
-                    goal.status = Status::Checking;
+                    advance(&mut goal, GoalLifecycleEvent::Check(true), "evaluating")?;
                     goal.checks += 1;
                     goal.attempt_id = Some(uuid::Uuid::new_v4().to_string());
                     goal.evidence_digest = Some(state.context.evidence_digest.clone());
                     goal.verdict_ref = None;
-                    goal.reason = "evaluating".into();
                     let attempt = goal.attempt_id.clone().ok_or("missing attempt")?;
                     session.set_state(INFLIGHT, json!(attempt));
                     let _attempt = Attempt(session, attempt);
@@ -332,7 +329,7 @@ impl Goals {
                         return Ok(status(&state));
                     }
                     goal.revision += 1;
-                    match result.and_then(|v| {
+                    let (event, reason) = match result.and_then(|v| {
                         serde_json::from_value::<VerdictRecord>(v)
                             .map_err(|_| "invalid verdict".into())
                     }) {
@@ -343,25 +340,29 @@ impl Goals {
                                     == goal.evidence_digest.as_ref() =>
                         {
                             goal.verdict_ref = Some(verdict.reference);
-                            (goal.status, goal.reason) = match verdict.evaluation {
-                                Evaluation::Complete => {
-                                    (Status::Complete, "jev_evidence_check_passed".into())
-                                }
+                            match verdict.evaluation {
+                                Evaluation::Complete => (
+                                    GoalLifecycleEvent::Pass(true),
+                                    "jev_evidence_check_passed".into(),
+                                ),
                                 Evaluation::Incomplete { missing } if goal.checks < MAX_CHECKS => (
-                                    Status::Active,
+                                    GoalLifecycleEvent::Retry(true),
                                     format!("unmet_checks: {}", missing.join(", ")),
                                 ),
                                 Evaluation::Incomplete { .. } => {
-                                    (Status::Paused, "check_limit".into())
+                                    (GoalLifecycleEvent::Stop(true), "check_limit".into())
                                 }
-                                Evaluation::Unknown { reason } => (Status::Paused, reason),
-                            };
+                                Evaluation::Unknown { reason } => {
+                                    (GoalLifecycleEvent::Stop(true), reason)
+                                }
+                            }
                         }
-                        _ => {
-                            goal.status = Status::Paused;
-                            goal.reason = "evaluation_unavailable".into();
-                        }
-                    }
+                        _ => (
+                            GoalLifecycleEvent::Stop(true),
+                            "evaluation_unavailable".to_string(),
+                        ),
+                    };
+                    advance(&mut goal, event, reason)?;
                     Self::commit(&requester, session, &mut state, goal).await?;
                 }
             }
