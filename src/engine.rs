@@ -118,8 +118,9 @@ impl TemplateEngine {
     /// Create a new template engine loading from the given directory.
     pub fn new(templates_dir: &Path) -> Result<Self, EngineError> {
         // Canonicalize to enable walking up the tree
-        let canonical_dir =
-            templates_dir.canonicalize().unwrap_or_else(|_| templates_dir.to_path_buf());
+        let canonical_dir = templates_dir
+            .canonicalize()
+            .unwrap_or_else(|_| templates_dir.to_path_buf());
 
         // Compute skill paths for the loader
         let skill_paths = Self::compute_skill_paths(&canonical_dir);
@@ -139,14 +140,21 @@ impl TemplateEngine {
             Ok(None)
         });
 
-        Ok(Self { jinja, templates_dir: canonical_dir, source: SkillSource::Dirs })
+        Ok(Self {
+            jinja,
+            templates_dir: canonical_dir,
+            source: SkillSource::Dirs,
+        })
     }
 
     /// Build an engine serving skills from an in-memory set instead of a `.skills/`
     /// directory. Intended for a consumer crate that embeds `.skills/*.j2` content
     /// via `include_str!` so it works regardless of the binary's runtime cwd.
     pub fn from_embedded_skills(skills: &[(&str, &str)]) -> Self {
-        let embedded = skills.iter().map(|(n, c)| (n.to_string(), c.to_string())).collect();
+        let embedded = skills
+            .iter()
+            .map(|(n, c)| (n.to_string(), c.to_string()))
+            .collect();
         Self {
             jinja: JinjaEnv::new(),
             templates_dir: std::path::PathBuf::new(),
@@ -204,7 +212,11 @@ impl TemplateEngine {
                 .iter()
                 .map(|(name, content)| {
                     let (meta, body) = parse_frontmatter(content);
-                    Skill { id: name.clone(), meta, content: body }
+                    Skill {
+                        id: name.clone(),
+                        meta,
+                        content: body,
+                    }
                 })
                 .collect(),
         };
@@ -247,7 +259,11 @@ impl TemplateEngine {
                 };
 
                 let (meta, body) = parse_frontmatter(&content);
-                skills.push(Skill { id: name.to_string(), meta, content: body });
+                skills.push(Skill {
+                    id: name.to_string(),
+                    meta,
+                    content: body,
+                });
             }
         }
 
@@ -260,7 +276,11 @@ impl TemplateEngine {
             SkillSource::Dirs => {
                 let content = self.read_skill_raw(name)?;
                 let (meta, body) = parse_frontmatter(&content);
-                Ok(Skill { id: name.to_string(), meta, content: body })
+                Ok(Skill {
+                    id: name.to_string(),
+                    meta,
+                    content: body,
+                })
             }
             SkillSource::Embedded(map) => {
                 let content = map
@@ -269,7 +289,11 @@ impl TemplateEngine {
                     .map(|(_, c)| c.as_str())
                     .ok_or_else(|| EngineError::TemplateNotFound(name.to_string()))?;
                 let (meta, body) = parse_frontmatter(content);
-                Ok(Skill { id: name.to_string(), meta, content: body })
+                Ok(Skill {
+                    id: name.to_string(),
+                    meta,
+                    content: body,
+                })
             }
         }
     }

@@ -1,0 +1,2 @@
+use_small_heuristics = "Default"
+edition = "2024"

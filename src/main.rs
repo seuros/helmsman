@@ -270,7 +270,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn handle_command(command: Commands) -> Result<(), Box<dyn std::error::Error>> {
     match command {
-        Commands::Add { source, list, global, local, skill } => {
+        Commands::Add {
+            source,
+            list,
+            global,
+            local,
+            skill,
+        } => {
             cmd_add(&source, list, global, local, &skill).await?;
         }
         Commands::Remove { name } => {
@@ -314,7 +320,10 @@ async fn cmd_add(
     let skills = match fetcher.discover_skills(parsed.subpath.as_deref()) {
         Ok(skills) => skills,
         Err(remote::RemoteError::NoSkillsFound) => {
-            eprintln!("No skills found in repository (scanned {})", fetcher.temp_path().display());
+            eprintln!(
+                "No skills found in repository (scanned {})",
+                fetcher.temp_path().display()
+            );
             return Ok(());
         }
         Err(e) => return Err(e.into()),
@@ -342,7 +351,10 @@ async fn cmd_add(
     let skills_to_install: Vec<_> = if specific_skills.is_empty() {
         skills
     } else {
-        skills.into_iter().filter(|s| specific_skills.contains(&s.name)).collect()
+        skills
+            .into_iter()
+            .filter(|s| specific_skills.contains(&s.name))
+            .collect()
     };
 
     if skills_to_install.is_empty() {
@@ -371,7 +383,11 @@ async fn cmd_add(
     let dest_dir = skills_dest_dir(&registry, install_global);
 
     // Install skills
-    println!("\nInstalling {} skill(s) to {}...", skills_to_install.len(), dest_dir.display());
+    println!(
+        "\nInstalling {} skill(s) to {}...",
+        skills_to_install.len(),
+        dest_dir.display()
+    );
 
     for skill in &skills_to_install {
         if registry.is_installed(&skill.name) {
@@ -484,7 +500,11 @@ fn cmd_migrate(force: bool) -> Result<(), Box<dyn std::error::Error>> {
 
     for src_name in root_files {
         let dst_name = format!("{}.j2", src_name);
-        migrate_file(std::path::Path::new(src_name), std::path::Path::new(&dst_name), force)?;
+        migrate_file(
+            std::path::Path::new(src_name),
+            std::path::Path::new(&dst_name),
+            force,
+        )?;
     }
 
     // Migrate skills in .skills/ directory
@@ -599,5 +619,9 @@ fn registry_entry_or_exit(registry: &Registry, name: &str) -> SkillEntry {
 }
 
 fn skills_dest_dir(registry: &Registry, global: bool) -> PathBuf {
-    if global { registry.global_skills_dir().to_path_buf() } else { Registry::project_skills_dir() }
+    if global {
+        registry.global_skills_dir().to_path_buf()
+    } else {
+        Registry::project_skills_dir()
+    }
 }
