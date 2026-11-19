@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.5](https://github.com/seuros/helmsman/compare/v0.5.4...v0.5.5) (2026-11-19)
+
+
+### Bug Fixes
+
+* **deps:** mcp-host 0.28.1 ([8e190d5](https://github.com/seuros/helmsman/commit/8e190d55f46a58373b92a8b07309f2660323d928))
+
 ## [0.5.4](https://github.com/seuros/helmsman/compare/v0.5.3...v0.5.4) (2026-11-17)
 
 
